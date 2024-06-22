@@ -1,7 +1,7 @@
 ﻿R E A D M E
 -----------
 
-The Aligner script enables you to align all rotors and hinges to specified angles.
+The Aligner script enables you to align rotors and hinges to specified angles.
 
 The script will find rotors and hinges on the current grid, AND any rotors or hinges connected through a rotor or hinge that is marked with the aligner.
 
@@ -23,7 +23,7 @@ Manual:
 -----------
 Built with Malware's MDK-SE: https://github.com/malware-dev/MDK-SE
 
-Steam Workshop:
+Steam Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3272710735
 Veeq's GitHub: https://github.com/Samuel-Lewis/space-engineers-scripts
 Donations: https://ko-fi.com/samuellewis1
 -----------

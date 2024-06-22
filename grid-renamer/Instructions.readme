@@ -1,0 +1,29 @@
+﻿R E A D M E
+-----------
+
+The Grid Renamer script is a simple script that prefixes all block names on a grid with the grid's name. This is useful for identifying blocks on a grid, especially when you have multiple grids in the same area. The script can also be used to show the grid's name on all antennas on the grid.
+
+To use the script
+1. Name your grid in the Info tab
+2. Place this script in a programmable block.
+3. Run with no arguments to prefix all block names for all grids.
+
+To filter on a grid, run a command with the grid name as an argument. Eg `prefix MyCoolGrid` will prefix all block names on the grid "MyCoolGrid".
+
+You can use wildcards to filter multiple grids. Eg `prefix My*` will prefix all block names on grids starting with "My" (like "MyCoolGrid", "MyHotRod", "MyMiner" etc).
+
+Manual:
+    Usage: <command> [gridName]
+        prefix [gridName] - Prefix block names with grid
+        antenna [gridName] - Show ship name on antennas
+        reset [gridName] - Reset block names to default
+        test [gridName] - List grid names. Useful for testing the wildcard filter.
+        help - Display this help message
+
+-----------
+Built with Malware's MDK-SE: https://github.com/malware-dev/MDK-SE
+
+Steam Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3272722169
+Veeq's GitHub: https://github.com/Samuel-Lewis/space-engineers-scripts
+Donations: https://ko-fi.com/samuellewis1
+-----------
