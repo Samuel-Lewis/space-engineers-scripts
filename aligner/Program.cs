@@ -58,9 +58,9 @@ namespace IngameScript
         public void Help()
         {
             Echo("Usage: <command>");
-            Echo("  lock - Aligns and locks hinges and rotors");
-            Echo("  release - Unlocks hinges and rotors");
-            Echo("  align - Aligns turret");
+            Echo("  align - Aligns hinges and rotors to target angle");
+            Echo("  lock - Locks tagged hinges and rotors");
+            Echo("  release - Unlocks tagged hinges and rotors");
             Echo("  cancel - Stops the current alignment operation");
             Echo("  help - Display this help message");
         }

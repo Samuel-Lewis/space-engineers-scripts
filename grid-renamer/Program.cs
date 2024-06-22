@@ -20,7 +20,7 @@ namespace IngameScript
         #endregion
 
         const string MetaScriptName = "Veeq's Grid Renamer";
-        const string MetaScriptVersion = "v1.0.0";
+        const string MetaScriptVersion = "v1.1.0";
 
         MyCommandLine _commandLine = new MyCommandLine();
         Dictionary<string, Action> _commands = new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase);
@@ -28,6 +28,7 @@ namespace IngameScript
         public Program()
         {
             _commands["help"] = Help;
+            _commands["standardise"] = Standardise;
             _commands["prefix"] = Prefix;
             _commands["test"] = Test;
             _commands["antenna"] = Antenna;
@@ -36,9 +37,9 @@ namespace IngameScript
 
         public void Help()
         {
-            // TODO, improve this. Explain wild card. Explain that gridName is a filter
             Echo("Usage: <command> [gridName]");
             Echo("command (optional):");
+            Echo("  standardise [gridName] - Standardise naming and prefix with grid name");
             Echo("  prefix [gridName] - Prefix block names with grid");
             Echo("  antenna [gridName] - Show ship name on antennas");
             Echo("  reset [gridName] - Reset block names to default");
@@ -88,7 +89,7 @@ namespace IngameScript
                 string gridName = block.CubeGrid.CustomName;
                 string suggestedPrefix = GetPrefixName(block);
 
-                return gridName.StartsWith("Small Grid") || gridName.StartsWith("Large Grid") || block.CustomName.StartsWith(suggestedPrefix);
+                return gridName.StartsWith("Small Grid") || gridName.StartsWith("Large Grid") || gridName.StartsWith("Static Grid") || block.CustomName.StartsWith(suggestedPrefix);
             });
 
             foreach (var block in blocks)
@@ -114,16 +115,63 @@ namespace IngameScript
             Echo($"Configured {antennas.Count} antennas.");
         }
 
+        bool HasDefaultName(IMyTerminalBlock block)
+        {
+            if (block.CustomName == "")
+            {
+                return true;
+            }
+
+            string prefix = GetPrefixName(block);
+
+            string defaultName = block.DefinitionDisplayNameText;
+            string pattern = $@"^({System.Text.RegularExpressions.Regex.Escape(prefix)})?\s*{System.Text.RegularExpressions.Regex.Escape(defaultName)}\s*\d*$";
+            System.Text.RegularExpressions.Regex regex = new System.Text.RegularExpressions.Regex(pattern);
+
+            return regex.IsMatch(block.CustomName);
+        }
+
+        void Standardise()
+        {
+            List<IMyTerminalBlock> blocks = GetBlocks();
+            foreach (var block in blocks)
+            {
+                if (HasDefaultName(block))
+                {
+                    block.CustomName = GetSpecialNaming(block.DefinitionDisplayNameText);
+                }
+            }
+
+            Prefix();
+            Antenna();
+        }
+
+        string GetSpecialNaming(string blockName)
+        {
+            switch (blockName)
+            {
+                case "Programmable Block":
+                case "Automaton Programmable Block":
+                    return "PB";
+                case "Timer Block":
+                case "Automaton Timer Block":
+                    return "Timer";
+                case "Event Controller":
+                    return "EC";
+                default:
+                    return blockName;
+            }
+        }
+
         void Reset()
         {
             List<IMyTerminalBlock> blocks = GetBlocks();
-
             foreach (var block in blocks)
             {
                 block.CustomName = block.DefinitionDisplayNameText;
             }
 
-            Echo($"Reset {blocks.Count} block names");
+            Echo($"Force Reset {blocks.Count} block names");
         }
 
         void Test()
@@ -161,8 +209,7 @@ namespace IngameScript
             }
             else
             {
-                Prefix();
-                Antenna();
+                Standardise();
             }
         }
     }
