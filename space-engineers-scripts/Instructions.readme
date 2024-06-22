@@ -1,0 +1,29 @@
+﻿R E A D M E
+-----------
+
+The Aligner script enables you to align all rotors and hinges to specified angles.
+
+The script will find rotors and hinges on the current grid, AND any rotors or hinges connected through a rotor or hinge that is marked with the aligner.
+
+To use the script
+1. Place this script in a programmable block.
+2. For all hinges and rotors, you need to add some configuration in the custom data field.
+    2a. Add the tag `[V Aligner]`
+    2b. Add the target angle (in degrees). Eg `targetAngle=90`
+3. Run the script with the argument `align`.
+
+Manual:
+    Usage: <command>
+        lock - Aligns and locks hinges and rotors
+        release - Unlocks hinges and rotors
+        align - Aligns turret
+        cancel - Stops the current alignment operation
+        help - Display this help message
+
+-----------
+Built with Malware's MDK-SE: github.com/malware-dev/MDK-SE
+
+Steam Workshop:
+Veeq's GitHub:
+Donations:
+-----------
