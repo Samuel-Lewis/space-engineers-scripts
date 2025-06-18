@@ -6,59 +6,57 @@ using VRage.Game.ModAPI.Ingame.Utilities;
 
 namespace IngameScript
 {
-    partial class Program : MyGridProgram
+    internal partial class Program : MyGridProgram
     {
         #region mdk macros
-        // This script was deployed at $MDK_DATETIME$
-        #endregion
+
+        // This script was last deployed at $MDK_DATETIME$
+
+        #endregion mdk macros
 
         #region mdk preserve
-        /**
-        * SCRIPT
-        * Don't change anything below this line unless you know what you're doing
-        */
-        #endregion
 
-        const string MetaScriptName = "Veeq's Grid Renamer";
-        const string MetaScriptVersion = "v1.1.0";
+        //
+        // SCRIPT
+        // Don't change anything below this line unless you *really* know what you're doing
+        // Go to https://github.com/samuel-Lewis/space-engineers-scripts if you want source or to contribute
+        //
 
-        MyCommandLine _commandLine = new MyCommandLine();
-        Dictionary<string, Action> _commands = new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase);
+        #endregion mdk preserve
+
+        private MyCommandLine _commandLine = new MyCommandLine();
+        private Dictionary<string, Action> _commands = new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase);
+
+        private CLI cli;
 
         public Program()
         {
-            _commands["help"] = Help;
-            _commands["standardise"] = Standardise;
-            _commands["prefix"] = Prefix;
-            _commands["test"] = Test;
-            _commands["antenna"] = Antenna;
-            _commands["reset"] = Reset;
+            Runtime.UpdateFrequency = UpdateFrequency.Once;
+
+            cli = new CLI("Veeq's Grid Renamer", "1.2", Echo);
+            cli.add("standardise", "standardise [gridName] - Standardise naming and prefix with grid name", Standardise);
+            cli.add("prefix", "prefix [gridName] - Prefix block names with grid", Prefix);
+            cli.add("test", "test [gridName] - List grid names", Test);
+            cli.add("antenna", "antenna [gridName] - Show ship name on antennas", Antenna);
+            cli.add("reset", "reset [gridName] - Reset block names to default", Reset);
+            cli.set_default("standardise");
         }
 
-        public void Help()
+        public void Main(string argument, UpdateType updateSource)
         {
-            Echo("Usage: <command> [gridName]");
-            Echo("command (optional):");
-            Echo("  standardise [gridName] - Standardise naming and prefix with grid name");
-            Echo("  prefix [gridName] - Prefix block names with grid");
-            Echo("  antenna [gridName] - Show ship name on antennas");
-            Echo("  reset [gridName] - Reset block names to default");
-            Echo("  test [gridName] - List grid names");
-            Echo("  help - Display this help message");
+            if (updateSource != UpdateType.Terminal)
+            {
+                return;
+            }
+            cli.run(argument);
         }
 
-        void PrintMeta()
-        {
-            Echo(MetaScriptName);
-            Echo(MetaScriptVersion);
-        }
-
-        string WildcardToRegex(string pattern)
+        private string WildcardToRegex(string pattern)
         {
             return "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace(@"\*", ".*").Replace(@"\?", ".") + "$";
         }
 
-        List<IMyTerminalBlock> GetBlocks()
+        private List<IMyTerminalBlock> GetBlocks()
         {
             List<IMyTerminalBlock> blocks = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocks(blocks);
@@ -72,14 +70,13 @@ namespace IngameScript
             return blocks;
         }
 
-        string GetPrefixName(IMyTerminalBlock block)
+        private string GetPrefixName(IMyTerminalBlock block)
         {
             string gridName = block.CubeGrid.CustomName;
             return $"[{block.CubeGrid.CustomName}]";
         }
 
-
-        void Prefix()
+        private void Prefix()
         {
             List<IMyTerminalBlock> blocks = GetBlocks();
 
@@ -101,7 +98,7 @@ namespace IngameScript
             Echo($"Renamed {blocks.Count} blocks");
         }
 
-        void Antenna()
+        private void Antenna()
         {
             List<IMyTerminalBlock> blocks = GetBlocks();
             List<IMyRadioAntenna> antennas = new List<IMyRadioAntenna>();
@@ -115,7 +112,7 @@ namespace IngameScript
             Echo($"Configured {antennas.Count} antennas.");
         }
 
-        bool HasDefaultName(IMyTerminalBlock block)
+        private bool HasDefaultName(IMyTerminalBlock block)
         {
             if (block.CustomName == "")
             {
@@ -131,7 +128,7 @@ namespace IngameScript
             return regex.IsMatch(block.CustomName);
         }
 
-        void Standardise()
+        private void Standardise()
         {
             List<IMyTerminalBlock> blocks = GetBlocks();
             foreach (var block in blocks)
@@ -146,24 +143,27 @@ namespace IngameScript
             Antenna();
         }
 
-        string GetSpecialNaming(string blockName)
+        private string GetSpecialNaming(string blockName)
         {
             switch (blockName)
             {
                 case "Programmable Block":
                 case "Automaton Programmable Block":
                     return "PB";
+
                 case "Timer Block":
                 case "Automaton Timer Block":
                     return "Timer";
+
                 case "Event Controller":
                     return "EC";
+
                 default:
                     return blockName;
             }
         }
 
-        void Reset()
+        private void Reset()
         {
             List<IMyTerminalBlock> blocks = GetBlocks();
             foreach (var block in blocks)
@@ -174,7 +174,7 @@ namespace IngameScript
             Echo($"Force Reset {blocks.Count} block names");
         }
 
-        void Test()
+        private void Test()
         {
             List<IMyTerminalBlock> blocks = GetBlocks();
             HashSet<string> gridNames = new HashSet<string>();
@@ -185,32 +185,6 @@ namespace IngameScript
             }
 
             Echo(string.Join(Environment.NewLine, gridNames));
-        }
-
-        public void Main(string argument)
-        {
-            PrintMeta();
-            if (_commandLine.TryParse(argument))
-            {
-                Action commandAction;
-                string command = _commandLine.Argument(0);
-                if (command == null)
-                {
-                    Echo("No command specified");
-                }
-                else if (_commands.TryGetValue(_commandLine.Argument(0), out commandAction))
-                {
-                    commandAction();
-                }
-                else
-                {
-                    Echo($"Unknown command '{command}'. Use 'help' for a list of commands.");
-                }
-            }
-            else
-            {
-                Standardise();
-            }
         }
     }
 }

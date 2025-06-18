@@ -70,7 +70,7 @@ namespace IngameScript
         //
         // SCRIPT
         // Don't change anything below this line unless you *really* know what you're doing
-        // Go to https://github.com/samuel-Lewis/space-engineers-scripts if you want to source or to contribute
+        // Go to https://github.com/samuel-Lewis/space-engineers-scripts if you want source or to contribute
         // 
 
         #endregion mdk preserve

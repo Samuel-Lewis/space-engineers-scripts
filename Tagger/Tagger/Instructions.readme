@@ -2,7 +2,7 @@
 -----------
 
 Adds CustomData tags to each block on the grid, so it's easily grouped and identifiable by MotherOS.
-or example, an Assembler will be tagged with both 'assembler' and 'production'.
+For example, an Assembler will be tagged with both 'assembler' and 'production'.
 
 The script follows specific rules for modifying CustomData:
 - If CustomData is empty, it creates the [general] section and adds the tags.

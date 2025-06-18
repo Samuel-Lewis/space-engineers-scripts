@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36212.18 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GridRenamer", "GridRenamer\GridRenamer.csproj", "{55F33A4B-34B1-4961-8DA2-166C6EA6F159}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Commander", "..\Commander\Commander.shproj", "{0B4DA711-43DD-434A-B555-5F44AF2E4F19}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{55F33A4B-34B1-4961-8DA2-166C6EA6F159}.Debug|x64.ActiveCfg = Debug|x64
+		{55F33A4B-34B1-4961-8DA2-166C6EA6F159}.Debug|x64.Build.0 = Debug|x64
+		{55F33A4B-34B1-4961-8DA2-166C6EA6F159}.Release|x64.ActiveCfg = Release|x64
+		{55F33A4B-34B1-4961-8DA2-166C6EA6F159}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {239800EE-B17A-415E-A5E0-5DEAEB234353}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\Commander\Commander.projitems*{0b4da711-43dd-434a-b555-5f44af2e4f19}*SharedItemsImports = 13
+		..\Commander\Commander.projitems*{55f33a4b-34b1-4961-8da2-166c6ea6f159}*SharedItemsImports = 5
+	EndGlobalSection
+EndGlobal
