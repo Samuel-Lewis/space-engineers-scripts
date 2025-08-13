@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using VRage.Game.ModAPI.Ingame.Utilities;
 
 namespace IngameScript
 {
@@ -22,49 +23,82 @@ namespace IngameScript
 
         private static readonly Dictionary<string, string[]> blockTypeMappings = new Dictionary<string, string[]>
         {
-            {"Light", new [] {"light"}},
-            {"Battery", new [] {"battery"}},
-            {"Piston", new [] {"piston"}},
-            {"Rotor", new [] {"rotor"}},
-            {"Hinge", new [] {"hinge"}},
-            {"Connector", new [] {"connector"}},
-            {"Collector", new [] {"collector"}},
-            {"Ejector", new [] {"ejector"}},
-            {"Drill", new [] {"drill", "tool"}},
-            {"Welder", new [] {"welder", "tool"}},
-            {"Grinder", new [] {"grinder", "tool"}},
-            {"Camera", new [] {"camera"}},
-            {"Sensor", new [] {"sensor"}},
-            {"RadioAntenna", new [] {"antenna"}},
-            {"LaserAntenna", new [] {"laser_antenna"}},
-            {"Beacon", new [] {"beacon"}},
-            {"Thrust", new [] {"thruster"}},
-            {"Gyro", new [] {"gyro"}},
-            {"Reactor", new [] {"reactor", "generator"}},
-            {"HydrogenEngine", new [] {"engine", "generator"}},
-            {"Parachute", new [] {"parachute"}},
-            {"Door", new [] {"door"}},
-            {"LandingGear", new [] {"landing_gear"}},
-            {"TextPanel", new [] {"lcd"}},
-            {"LCD", new [] {"lcd"}},
-            {"ButtonPanel", new [] {"button_panel"}},
-            {"TimerBlock", new [] {"timer"}},
-            {"ProgrammableBlock", new [] {"programmable_block"}},
+            {"AdvancedDoor", new [] {"door"}},
+            {"AirtightHangarDoor", new [] {"door"}},
+            {"AirtightSlideDoor", new [] {"door"}},
+            {"AirVent", new [] {"vent"}},
+            {"ArtificialMassBlock", new [] {"mass"}},
             {"Assembler", new [] {"assembler", "production"}},
-            {"Refinery", new [] {"refinery", "production"}},
-            {"OxygenGenerator", new [] {"o2h2_generator", "generator"}},
-            {"OxygenTank", new [] {"oxygen_tank", "tank"}},
-            {"HydrogenTank", new [] {"hydrogen_tank", "tank"}},
+            {"BasicMissionBlock", new [] {"mission"}},
+            {"BatteryBlock", new [] {"battery", "power"}},
+            {"Beacon", new [] {"beacon", "signal"}},
+            {"BroadcastController", new [] {"broadcast_controller"}},
+            {"BroadcastControllerBlock", new [] {"broadcast_controller"}},
+            {"ButtonPanel", new [] {"panel"}},
+            {"CameraBlock", new [] {"camera"}},
             {"CargoContainer", new [] {"cargo"}},
-            {"Cockpit", new [] {"cockpit"}},
-            {"ControlStation", new [] {"cockpit"}},
-            {"RemoteControl", new [] {"remote_control"}},
+            {"Collector", new [] {"collector", "conveyor"}},
+            {"ControlPanel", new [] {"panel"}},
+            {"ConveyorSorter", new [] {"sorter", "conveyor"}},
+            {"CryoChamber", new [] {"cryo_chamber"}},
+            {"Decoy", new [] {"decoy", "signal"}},
+            {"DefensiveCombatBlock", new [] {"ai", "flight"}},
+            {"EmotionControllerBlock", new [] {"ai", "emotion_controller"}},
+            {"EventControllerBlock", new [] {"ai", "event_controller"}},
+            {"ExtendedPistonBase", new [] {"piston"}},
+            {"FlightMovementBlock", new [] {"ai", "flight"}},
+            {"GasGenerator", new [] {"power"}},
+            {"GasTank", new [] {"tank"}},
+            {"GravityGenerator", new [] {"gravity"}},
+            {"GravityGeneratorSphere", new [] {"gravity"}},
+            {"Gyro", new [] {"gyro", "flight"}},
+            {"HeatVent", new [] {"vent"}},
+            {"InteriorLight", new [] {"light"}},
+            {"JumpDrive", new [] {"jump_drive", "flight"}},
+            {"LandingGear", new [] {"landing_gear"}},
+            {"LargeGatlingTurret", new [] {"weapon", "turret", "gatling", "turret_gatling"}},
+            {"LargeInteriorTurret", new [] {"weapon", "turret", "interior", "turret_interior"}},
+            {"LargeMissileTurret", new [] {"weapon", "turret", "missile", "turret_missile"}},
+            {"LaserAntenna", new [] {"antenna", "signal", "laser_antenna"}},
+            {"MedicalRoom", new [] {"medical"}},
+            {"MotorAdvancedStator", new [] {"rotor", "conveyor"}},
+            {"MotorSuspension", new [] {"suspension"}},
+            {"OffensiveCombatBlock", new [] {"ai", "flight"}},
+            {"OreDetector", new [] {"ore_detector"}},
+            {"OxygenFarm", new [] {"oxygen_farm"}},
+            {"Parachute", new [] {"parachute"}},
+            {"PathRecorderBlock", new [] {"ai", "flight"}},
+            {"ProgrammableBlock", new [] {"programmable_block"}},
+            {"Projector", new [] {"projector"}},
+            {"RadioAntenna", new [] {"antenna", "signal"}},
+            {"Reactor", new [] {"reactor", "power"}},
+            {"Refinery", new [] {"refinery", "production"}},
+            {"ReflectorLight", new [] {"light"}},
+            {"RemoteControl", new [] {"remote_control", "ai", "flight"}},
+            {"SafeZoneBlock", new [] {"safe_zone"}},
+            {"Searchlight", new [] {"light"}},
+            {"SensorBlock", new [] {"sensor"}},
+            {"ShipConnector", new [] {"connector", "conveyor"}},
+            {"ShipDrill", new [] {"drill", "tool"}},
+            {"ShipGrinder", new [] {"grinder", "tool"}},
+            {"ShipMergeBlock", new [] {"merge"}},
+            {"ShipWelder", new [] {"welder", "tool"}},
+            {"SmallGatlingGun", new [] {"weapon", "gatling", "small_gatling"}},
+            {"SmallMissileLauncherReload", new [] {"weapon", "missile", "small_missile"}},
+            {"SolarPanel", new [] {"solar_panel", "power"}},
+            {"SoundBlock", new [] {"sound"}},
+            {"SpaceBall", new [] {"space_ball"}},
+            {"StoreBlock", new [] {"store"}},
+            {"TargetDummyBlock", new [] {"target_dummy", "signal"}},
+            {"TextPanel", new [] {"lcd"}},
+            {"Thrust", new [] {"thrust", "flight"}},
+            {"TimerBlock", new [] {"timer", "ai"}},
+            {"Transponder", new [] {"transponder", "signal"}},
+            {"TurretControlBlock", new [] {"turret_control"}},
             {"UpgradeModule", new [] {"upgrade_module"}},
-            {"GatlingTurret", new [] {"turret", "weapon"}},
-            {"InteriorTurret", new [] {"turret", "weapon"}},
-            {"MissileTurret", new [] {"turret", "weapon"}},
-            {"GatlingGun", new [] {"weapon_fixed", "weapon"}},
-            {"MissileLauncher", new [] {"weapon_fixed", "weapon"}}
+            {"VirtualMass", new [] {"mass", "gravity"}},
+            {"Warhead", new [] {"warhead", "explosive", "weapon"}},
+            {"WindTurbine", new [] {"wind_turbine", "power"}},
         };
 
         //
@@ -76,14 +110,16 @@ namespace IngameScript
         #endregion mdk preserve
 
         private CLI cli;
+        private MyIni _ini = new MyIni();
 
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Once;
 
-            cli = new CLI("Tagger", "1.0", Echo);
-            cli.add("tag", "Tag blocks with YAML tags", DoBlockTagging);
-            cli.add("nuke", "Deletes custom data on all blocks", DoClearCustomData);
+            cli = new CLI("Tagger", "1.1", Echo);
+            cli.add("tag", "Tag blocks with INI tags", DoBlockTagging);
+            cli.add("clear", "Clears [general] tags for all blocks", DoClearTags);
+            cli.add("dump", "Debug: Dumps all known blocks to programmable block custom data", DoDump);
             cli.set_default("tag");
         }
 
@@ -96,52 +132,31 @@ namespace IngameScript
             cli.run(argument);
         }
 
+        public void DoDump()
+        {
+            var blocks = GetEligibleBlocks();
+            _ini = new MyIni();
+            var blockNames = blocks.Select(b => $"{b.CustomName}, {b.BlockDefinition.TypeIdString}, {b.BlockDefinition.SubtypeId}").ToList();
+
+            var str = string.Join("\n ", blockNames);
+            _ini.Set("debug", "blocks", str);
+            Me.CustomData = _ini.ToString();
+        }
+
         public void DoBlockTagging()
         {
-            Echo("Starting block tagging...");
-
-            var blocks = new List<IMyTerminalBlock>();
-            GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(blocks, b => b.IsSameConstructAs(Me));
-
-            if (blocks.Count == 0)
-            {
-                Echo("No blocks found on the grid.");
-                return;
-            }
-
-            Echo($"Found {blocks.Count} blocks to process.");
-            int blocksModified = 0;
-            int blocksSkipped = 0;
+            Echo("Starting tagging...");
+            var blocks = GetEligibleBlocks();
 
             foreach (var block in blocks)
             {
                 try
                 {
-                    string originalCustomData = block.CustomData;
-
-                    if (!string.IsNullOrWhiteSpace(originalCustomData) && !originalCustomData.Contains("[general]"))
-                    {
-                        blocksSkipped++;
-                        continue;
-                    }
-
-                    List<string> blockTags = GetBlockTags(block);
-                    if (blockTags.Count == 0)
-                    {
-                        continue;
-                    }
-
-                    string currentCustomData = originalCustomData;
-                    foreach (var tag in blockTags)
-                    {
-                        currentCustomData = SimpleYAML.SetOrUpdateTag(currentCustomData, "general", "tags", tag);
-                    }
-
-                    if (originalCustomData != currentCustomData)
-                    {
-                        block.CustomData = currentCustomData;
-                        blocksModified++;
-                    }
+                    _ini = new MyIni();
+                    var tags = GetBlockTags(block);
+                    var tagsString = string.Join(", ", tags);
+                    _ini.Set("general", "tags", tagsString);
+                    block.CustomData = _ini.ToString();
                 }
                 catch (Exception e)
                 {
@@ -149,46 +164,62 @@ namespace IngameScript
                 }
             }
 
-            Echo("Block tagging process complete.");
-            Echo($"Modified {blocksModified} blocks.");
-            if (blocksSkipped > 0)
-            {
-                Echo($"Skipped {blocksSkipped} blocks with non-standard CustomData.");
-            }
+            Echo("Tagging complete");
         }
 
-        public void DoClearCustomData()
+        public void DoClearTags()
         {
-            Echo("Starting custom data clearing...");
-            var blocks = new List<IMyTerminalBlock>();
-            GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(blocks, b => b.IsSameConstructAs(Me));
-            if (blocks.Count == 0)
-            {
-                Echo("No blocks found on the grid.");
-                return;
-            }
-            Echo($"Found {blocks.Count} blocks to process.");
-            int blocksCleared = 0;
+            Echo("Starting tag cleanup...");
+            var blocks = GetEligibleBlocks();
+
             foreach (var block in blocks)
             {
                 try
                 {
-                    block.CustomData = string.Empty;
-                    blocksCleared++;
+                    _ini = new MyIni();
+                    _ini.Set("general", "tags", null);
+                    block.CustomData = _ini.ToString();
                 }
                 catch (Exception e)
                 {
-                    Echo($"Error clearing custom data for block: {block.CustomName}\nError: {e.Message}");
+                    Echo($"Error processing block: {block.CustomName}\nError: {e.Message}");
                 }
             }
-            Echo($"Cleared CustomData for {blocksCleared} blocks.");
+
+            Echo("Tagging complete");
+        }
+        public List<IMyTerminalBlock> GetEligibleBlocks()
+        {
+            var allBlocks = new List<IMyTerminalBlock>();
+            GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(allBlocks, b => b.IsSameConstructAs(Me));
+
+            var allBlocksCount = allBlocks.Count;
+            var blocks = new List<IMyTerminalBlock>();
+
+            blocks.AddRange(allBlocks.Where(b => MyIni.HasSection(b.CustomData, "general") || string.IsNullOrWhiteSpace(b.CustomData)));
+            Echo($"Found {blocks.Count} out of {allBlocksCount}");
+
+            if (blocks.Count == 0)
+            {
+                Echo("No eligible blocks found on grid");
+            }
+            return blocks;
         }
 
         public List<string> GetBlockTags(IMyTerminalBlock block)
         {
-            var tags = new HashSet<string>(); // Use a HashSet to automatically prevent duplicate tags
+            // Get existing tags
+            _ini = new MyIni();
+            if (!_ini.TryParse(block.CustomData))
+            {
+                Echo($"Failed to parse CustomData for block: {block.CustomName}");
+                return new List<string>();
+            }
+
+            var tags = _ini.Get("general", "tags").ToString().Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToHashSet<string>();
             string typeId = block.BlockDefinition.TypeIdString;
-            string subtypeId = block.BlockDefinition.SubtypeId;
+
+            tags.Add("all");
 
             // Add tags from the blockTypeMappings
             foreach (var mapping in blockTypeMappings)
@@ -202,7 +233,7 @@ namespace IngameScript
                 }
             }
 
-            // Fallback for any unmapped but valid block types
+            // Fall back for any unmapped but valid block types
             if (tags.Count == 0)
             {
                 tags.Add(typeId.Replace("MyObjectBuilder_", "").ToLower());
