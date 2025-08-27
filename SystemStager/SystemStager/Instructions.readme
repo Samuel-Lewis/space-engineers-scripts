@@ -1,0 +1,50 @@
+﻿R e a d m e
+-----------
+
+Run the commands
+
+# Stages
+"boot"
+"launch"
+"flight"
+"approach"
+"dock"
+
+
+# Systems/Modes
+"powersaver"
+"production"
+"combat"
+"tools"
+
+CustomData on Programmable Block
+```ini
+[stager.config]
+; How long to wait after booting before running the launch stage
+boot_time_seconds=1
+; How long to wait after docking before running the dock stage
+dock_time_seconds=1
+
+; If blank, any connector on the grid will be used
+docking_connector=""
+
+; If using Spug's Auto Docking, specify the Programmable Block with the script
+landing_programmable_block="Miner.PB Dock"
+
+landing_pb_default_arg="default_home"
+lcd_tag="LCDStager"
+custom_systems="welder,boarding_ramp"
+```
+
+CustomData on Configured Blocks
+```ini
+[stager.stages]
+boot=true
+launch=false
+flight=ignore
+
+[stager.systems]
+powersaver=true
+production=false
+combat=ignore
+```
