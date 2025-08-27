@@ -86,7 +86,6 @@ public class CLI
     {
         if (index < 0 || index >= commandLine.ArgumentCount)
         {
-            Echo($"Missing argument. Use 'help' for a list of commands.");
             return null;
         }
         return commandLine.Argument(index);

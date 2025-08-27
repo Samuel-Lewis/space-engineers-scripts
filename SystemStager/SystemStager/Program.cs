@@ -101,8 +101,7 @@ namespace IngameScript
         MyIni _ini = null;
 
         Dictionary<string, SystemStatus> current_systems = new Dictionary<string, SystemStatus>();
-        string current_stage = "boot";
-
+        int current_stage = 0;
 
         Program()
         {
@@ -127,64 +126,26 @@ namespace IngameScript
             default_tags.AddRange(default_stages);
             default_tags.AddRange(default_systems);
 
-            data_store = new DataStore()
-            .Add("AirtightHangarDoor", null, "-0------", Actions.Door)
-            .Add("Assembler", null, "----10--")
-            .Add("BatteryBlock", null, "-0-1----", Actions.BatteryBlock)
-            .Add("Beacon", null, "1-------")
-            .Add("Cockpit", null, "01-0----", Actions.Cockpit)
-            .Add("Decoy", null, "---0--1-")
-            .Add("DefensiveCombatBlock", null, "--00----")
-            .Add("Door", null, "-0------", Actions.Door)
-            .Add("Drill", null, "--00---1")
-            .Add("GravityGenerator", null, "-----0--")
-            .Add("GravityGeneratorSphere", null, "-----0--")
-            .Add("Gyro", null, "-1-0----")
-            .Add("HydrogenEngine", null, "----1---")
-            .Add("InteriorLight", null, "1--0--1-", Actions.Light)
-            .Add("JumpDrive", null, "-----0--")
-            .Add("LandingGear", null, "-0------", Actions.LandingGear)
-            .Add("LargeGatlingTurret", "Gatling", "--00--1-")
-            .Add("LargeGatlingTurret", "AutoCannon", "--00--1-")
-            .Add("LargeMissileTurret", "LargeCalibre", "--00--1-")
-            .Add("LargeMissileTurret", "MediumCalibre", "--00--1-")
-            .Add("MotorAdvancedRotor", null, "---0----", Actions.Motor)
-            .Add("MotorAdvancedStator", null, "---0----", Actions.Motor)
-            .Add("MotorRotor", null, "---0----", Actions.Motor)
-            .Add("OffensiveCombatBlock", null, "---0----")
-            .Add("OreDetector", null, "---0-001")
-            .Add("OxygenGenerator", null, "----1---")
-            .Add("OxygenTank", "Oxygen", "-0-1----", Actions.Tank)
-            .Add("OxygenTank", "Hydrogen", "-0-1----", Actions.Tank)
-            .Add("Refinery", null, "----10--")
-            .Add("ReflectorLight", null, "1--0---1")
-            .Add("Searchlight", null, "1--0---1")
-            .Add("ShipConnector", null, "-0-1----", Actions.ShipConnector)
-            .Add("ShipGrinder", null, "---0---1")
-            .Add("SmallGatlingGun", "Gatling", "---0--1-")
-            .Add("SmallGatlingGun", "Autocannon", "---0--1-")
-            .Add("SmallMissileLauncher", "Missile", "---0--1-")
-            .Add("SmallMissileLauncher", "LargeCalibre", "---0--1-")
-            .Add("SmallMissileLauncher", "Flare", "---0--1-")
-            .Add("SmallMissileLauncherReload", "Rocket", "---0--1-")
-            .Add("SmallMissileLauncherReload", "Railgun", "---0--1-")
-            .Add("SmallMissileLauncherReload", "MediumCalibre", "---0--1-")
-            .Add("SoundBlock", null, "-1-1----", Actions.SoundBlock)
-            .Add("Thrust", null, "-1-0----");
-
             // Run the command
             cli.run(argument);
         }
 
         public void DoStage()
         {
-            Echo("Running Stage");
+
             string tag = cli.arg(1);
 
             if (string.IsNullOrWhiteSpace(tag))
             {
-                Echo("Error: No stage provided");
-                return;
+                current_stage++;
+                current_stage = current_stage % default_stages.Count;
+                tag = default_stages[current_stage];
+
+                if (cli.truthy_switch())
+                {
+                    Echo($"Early exit at stage: {tag}");
+                    return;
+                }
             }
 
             if (!default_stages.Contains(tag))
@@ -193,6 +154,7 @@ namespace IngameScript
                 return;
             }
 
+            Echo($"Entering stage {tag}");
             bool result = RunTransition(tag);
         }
 
@@ -248,7 +210,7 @@ namespace IngameScript
             Echo($"Grid Name: {Me.CubeGrid.CustomName}");
 
             Echo("\n:: Stage ::");
-            Echo($"Current Stage: {current_stage}");
+            Echo($"Current Stage: {default_stages[current_stage]}");
 
             Echo("\n:: Systems ::");
             GetAllSystems().ForEach(s =>
@@ -421,8 +383,8 @@ namespace IngameScript
                 }
             }
 
-            Echo($"Transition {tag} complete: {success} success, {failure} failure");
-            return success > failure;
+            Echo($"Transition {tag} complete.\n{success} successes\n{failure} failures");
+            return success > 0 && failure == 0;
         }
 
         public bool Act(IMyFunctionalBlock block, bool new_state, Action<IMyFunctionalBlock, bool> action, bool positive_transition = true)
