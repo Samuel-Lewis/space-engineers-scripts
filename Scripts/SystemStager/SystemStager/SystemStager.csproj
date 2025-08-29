@@ -26,4 +26,5 @@
   <Import Project="..\..\..\Mixins\CLI\CLI.projitems" Label="Shared" />
   <Import Project="..\..\..\Mixins\Display\Display.projitems" Label="Shared" />
   <Import Project="..\..\..\Mixins\IniHandler\IniHandler.projitems" Label="Shared" />
+  <Import Project="..\..\..\Mixins\EventListener\EventListener.projitems" Label="Shared" />
 </Project>

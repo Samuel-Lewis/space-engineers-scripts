@@ -7,8 +7,8 @@ using VRage.Game.ModAPI.Ingame.Utilities;
 public class CLI
 {
     private MyCommandLine commandLine = new MyCommandLine();
-    private Dictionary<string, Action> commands = new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase);
-    private Dictionary<string, string> descriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, Action<string>> commands = new Dictionary<string, Action<string>>();
+    private Dictionary<string, string> descriptions = new Dictionary<string, string>();
 
     private string default_command = "help";
 
@@ -27,17 +27,17 @@ public class CLI
         add("help", "Display help info", help);
     }
 
-    public void add(string command, string description, Action action)
+    public void add(string command, string description, Action<string> action)
     {
         if (commands.ContainsKey(command))
         {
-            throw new ArgumentException($"Command '{command}' already exists.");
+            throw new ArgumentException($"CLI: '{command}' already exists.");
         }
         commands[command] = action;
         descriptions[command] = description;
     }
 
-    public void help()
+    public void help(string args = null)
     {
         Echo(name);
         Echo($"Version: {version}");
@@ -68,8 +68,15 @@ public class CLI
 
         if (commandLine.TryParse(input))
         {
-            Action commandAction;
+            Action<string> commandAction;
             string command = commandLine.Argument(0);
+
+            string next_arg = null;
+            if (commandLine.ArgumentCount > 1)
+            {
+                next_arg = commandLine.Argument(1);
+            }
+
             if (command == null)
             {
                 run(default_command);
@@ -77,7 +84,7 @@ public class CLI
             }
             else if (commands.TryGetValue(commandLine.Argument(0), out commandAction))
             {
-                commandAction();
+                commandAction(next_arg);
             }
             else
             {

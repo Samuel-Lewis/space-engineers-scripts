@@ -100,9 +100,14 @@ namespace IngameScript
         Dictionary<string, SystemStatus> current_systems = new Dictionary<string, SystemStatus>();
         int current_stage = 0;
 
+
+        CockpitEvent cockpit_event;
+        ConnectorEvent connector_event;
+
         Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
+
             log = new DisplayLog(this, "Stager");
             display_status = new DisplayStatus(this, "Stager");
 
@@ -118,26 +123,62 @@ namespace IngameScript
             default_tags.AddRange(default_stages);
             default_tags.AddRange(default_systems);
 
+            // Event Handlers
+            cockpit_event = new CockpitEvent(this, OnCockpitEntered, OnCockpitExited);
+            connector_event = new ConnectorEvent(this, OnConnectorConnected);
+
+            // UI Updates
             display_status.AddStat("Stage", () => default_stages[current_stage]);
+            display_status.AddStat("Cockpit", () => cockpit_event.IsDetected() ? "Occupied" : "Empty");
+            display_status.AddStat("Connector", () => connector_event.IsDetected() ? "Docked" : "Free");
         }
 
         public void Main(string argument, UpdateType updateSource)
         {
-            display_status.Update();
 
-            if (updateSource == UpdateType.Terminal)
+            if ((updateSource & (UpdateType.Update100 | UpdateType.Update10)) != 0)
             {
-                // Run the command
+                cockpit_event.Poll();
+                connector_event.Poll();
+                display_status.Update();
+            }
+
+            if ((updateSource & (UpdateType.Trigger | UpdateType.Terminal)) != 0)
+            {
                 cli.run(argument);
                 return;
             }
-
         }
 
-        public void DoStage()
+        public void OnCockpitEntered(List<IMyCockpit> cockpits)
         {
-            string tag = cli.arg(1);
+            if (current_stage == 3) // Docked
+            {
+                DoStage("boot");
+            }
+        }
 
+        public void OnCockpitExited()
+        {
+            if (current_stage == 0) // Booted
+            {
+                DoStage("dock");
+            }
+        }
+
+        public void OnConnectorConnected(List<IMyShipConnector> cockpits)
+        {
+            DoStage("dock");
+        }
+
+        public void OnConnectorDisconnected()
+        {
+            // TODO: Maybe launch?
+        }
+
+
+        public void DoStage(string tag)
+        {
             if (string.IsNullOrWhiteSpace(tag))
             {
                 current_stage++;
@@ -155,9 +196,8 @@ namespace IngameScript
             bool result = RunTransition(tag);
         }
 
-        public void DoSystem()
+        public void DoSystem(string tag)
         {
-            string tag = cli.arg(1);
             log.Echo($"Selecting {tag.ToUpper()}");
             if (!AssertSystem(tag))
             {
@@ -207,7 +247,7 @@ namespace IngameScript
             }
         }
 
-        public void DoDiagnostics()
+        public void DoDiagnostics(string next_arg)
         {
             Echo(":: Grid ::");
             Echo($"Grid Name: {Me.CubeGrid.CustomName}");
@@ -223,7 +263,7 @@ namespace IngameScript
             });
         }
 
-        public void DoDebug()
+        public void DoDebug(string next_arg)
         {
             log.Echo("Running Debug...");
 

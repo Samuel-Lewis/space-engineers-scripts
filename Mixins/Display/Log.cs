@@ -39,7 +39,7 @@ namespace IngameScript
                 Echo($"ERR: {msg}");
             }
 
-            public void Clear()
+            public void Clear(string next_arg)
             {
                 lines.Clear();
                 WriteToSurfaces();
@@ -51,7 +51,6 @@ namespace IngameScript
                 foreach (IMyTextPanel surface in surfaces)
                 {
                     int max_lines = (int)(surface.SurfaceSize.Y / (surface.FontSize * 30));
-                    program.Echo(max_lines.ToString());
                     string trimmed_text = cache.ContainsKey(max_lines) ? cache[max_lines] : null;
                     if (trimmed_text == null)
                     {
