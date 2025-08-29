@@ -1,21 +1,12 @@
 ﻿R e a d m e
+
 -----------
+There are two main functions:
+* Stages - The sequential steps a ship goes through from launching back to docking
+* Systems - The various systems (or modes) that can be toggled on or off
 
-Run the commands
+Use `help` command in the PB to get a list of commands and their usage
 
-# Stages
-"boot"
-"launch"
-"flight"
-"approach"
-"dock"
-
-
-# Systems/Modes
-"powersaver"
-"production"
-"combat"
-"tools"
 
 CustomData on Programmable Block
 ```ini

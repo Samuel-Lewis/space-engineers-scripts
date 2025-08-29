@@ -35,23 +35,22 @@ namespace IngameScript
         DataStore data_store = new DataStore()
             .Add("AirtightHangarDoor", null, "-0------", Actions.Door)
             .Add("Assembler", null, "----10--")
-            .Add("BatteryBlock", null, "-0-1----", Actions.BatteryBlock)
-            .Add("Beacon", null, "1-------")
-            .Add("Cockpit", null, "01-0----", Actions.Cockpit)
+            .Add("BatteryBlock", null, "-1-0----", Actions.BatteryBlock)
+            .Add("Beacon", null, "1--0----")
+            .Add("Cockpit", null, "0100----", Actions.Cockpit)
             .Add("Decoy", null, "---0--1-")
             .Add("DefensiveCombatBlock", null, "--00----")
             .Add("Door", null, "-0------", Actions.Door)
             .Add("Drill", null, "--00---1")
+            .Add("FlightMovementBlock", null, "---0----")
             .Add("GravityGenerator", null, "-----0--")
             .Add("GravityGeneratorSphere", null, "-----0--")
             .Add("Gyro", null, "-1-0----")
             .Add("HydrogenEngine", null, "----1---")
-            .Add("InteriorLight", null, "1--0--1-", Actions.Light)
+            .Add("InteriorLight", null, "1-----11", Actions.Light)
             .Add("JumpDrive", null, "-----0--")
             .Add("LandingGear", null, "-0------", Actions.LandingGear)
             .Add("LargeGatlingTurret", "Gatling", "--00--1-")
-            .Add("LargeGatlingTurret", "AutoCannon", "--00--1-")
-            .Add("LargeMissileTurret", "LargeCalibre", "--00--1-")
             .Add("LargeMissileTurret", "MediumCalibre", "--00--1-")
             .Add("MotorAdvancedRotor", null, "---0----", Actions.Motor)
             .Add("MotorAdvancedStator", null, "---0----", Actions.Motor)
@@ -63,17 +62,13 @@ namespace IngameScript
             .Add("OxygenTank", "Hydrogen", "-0-1----", Actions.Tank)
             .Add("Refinery", null, "----10--")
             .Add("ReflectorLight", null, "1--0---1")
-            .Add("Searchlight", null, "1--0---1")
-            .Add("ShipConnector", null, "-0-1----", Actions.ShipConnector)
+            .Add("Searchlight", null, "1--0---1", Actions.Searchlight)
+            .Add("ShipConnector", null, "-1-0----", Actions.ShipConnector)
             .Add("ShipGrinder", null, "---0---1")
-            .Add("SmallGatlingGun", "Gatling", "---0--1-")
-            .Add("SmallGatlingGun", "Autocannon", "---0--1-")
-            .Add("SmallMissileLauncher", "Missile", "---0--1-")
-            .Add("SmallMissileLauncher", "LargeCalibre", "---0--1-")
-            .Add("SmallMissileLauncher", "Flare", "---0--1-")
-            .Add("SmallMissileLauncherReload", "Rocket", "---0--1-")
-            .Add("SmallMissileLauncherReload", "Railgun", "---0--1-")
-            .Add("SmallMissileLauncherReload", "MediumCalibre", "---0--1-")
+            .Add("ShipWelder", null, "---0---1")
+            .Add("SmallGatlingGun", null, "---0--1-")
+            .Add("SmallMissileLauncher", null, "---0--1-")
+            .Add("SmallMissileLauncherReload", null, "---0--1-")
             .Add("SoundBlock", null, "-1-1----", Actions.SoundBlock)
             .Add("Thrust", null, "-1-0----");
 
@@ -97,8 +92,11 @@ namespace IngameScript
 
         #endregion mdk preserve
 
+
         CLI cli;
+        Display display;
         MyIni _ini = null;
+
 
         Dictionary<string, SystemStatus> current_systems = new Dictionary<string, SystemStatus>();
         int current_stage = 0;
@@ -106,13 +104,16 @@ namespace IngameScript
         Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Once;
+            display = new Display(this);
 
-            cli = new CLI("SystemStager", "1.0", Echo);
+            cli = new CLI(this, "SystemStager", "1.0");
+            cli.add("stage", "[tag]: Start next stage, or start [tag].", DoStage);
+            cli.add("system", "<tag>: Toggle system. Force with -on/-off", DoSystem);
             cli.add("diagnostics", "Print diagnostics", DoDiagnostics);
-            cli.add("stage", "Begin a stage", DoStage);
-            cli.add("system", "Control a system", DoSystem);
             cli.add("debug", "Saves debug to CustomData", DoDebug);
+            cli.add("clear", "Clears the display", display.Clear);
             cli.set_default("diagnostics");
+
         }
 
         public void Main(string argument, UpdateType updateSource)
@@ -132,35 +133,34 @@ namespace IngameScript
 
         public void DoStage()
         {
-
             string tag = cli.arg(1);
+            display.Echo($"{status_on.VerbString()} {tag.ToUpper()}");
 
             if (string.IsNullOrWhiteSpace(tag))
             {
                 current_stage++;
                 current_stage = current_stage % default_stages.Count;
                 tag = default_stages[current_stage];
-
-                if (cli.truthy_switch())
-                {
-                    Echo($"Early exit at stage: {tag}");
-                    return;
-                }
             }
 
             if (!default_stages.Contains(tag))
             {
-                Echo($"Error: Stage '{tag}' not found");
+                display.EchoError($"'{tag}' not found");
                 return;
             }
 
-            Echo($"Entering stage {tag}");
             bool result = RunTransition(tag);
         }
 
         public void DoSystem()
         {
             string tag = cli.arg(1);
+            display.Echo($"Selecting {tag.ToUpper()}");
+            if (!AssertSystem(tag))
+            {
+                return;
+            }
+
             SystemStatus status = GetSystemStatus(tag);
 
             if (status == null)
@@ -189,17 +189,17 @@ namespace IngameScript
                 status = status_on;
             }
 
-            Echo($"{status.VerbString()} {tag}");
+            display.Echo($"{status.VerbString()} system {tag.ToUpper()}");
             bool result = RunTransition(tag, false, positive_transition);
 
             if (result)
             {
-                Echo($"Success");
+                display.Echo($"{status.NameString()} system {tag.ToUpper()}");
                 SetSystemStatus(tag, status);
             }
             else
             {
-                Echo($"Failed");
+                display.Echo($"{status_error.NameString()} system {tag.ToUpper()}");
                 SetSystemStatus(tag, status_error);
             }
         }
@@ -222,13 +222,13 @@ namespace IngameScript
 
         public void DoDebug()
         {
-            Echo("Running Debug");
+            display.Echo("Running Debug");
 
             _ini = new MyIni();
             MyIniParseResult result;
             if (!_ini.TryParse(Me.CustomData, out result))
             {
-                Echo($"Error parsing CustomData: {result}");
+                display.EchoError($"Parsing CustomData:\n{result}");
                 return;
             }
 
@@ -237,14 +237,6 @@ namespace IngameScript
             _ini.Set(ini_global_debug, "systems", string.Join(", ", GetAllSystems()));
 
             Me.CustomData = _ini.ToString();
-        }
-
-        public static Dictionary<string, Type> GetAllAvailableBlockTypes()
-        {
-            var blockTypes = new Dictionary<string, Type>();
-
-
-            return blockTypes;
         }
 
         string ReadIni(string section, string key, IMyTerminalBlock block = null)
@@ -259,7 +251,7 @@ namespace IngameScript
 
             if (!_ini.TryParse(block.CustomData, section, out result))
             {
-                return null;
+                return "";
             }
 
             return _ini.Get(section, key).ToString();
@@ -284,48 +276,38 @@ namespace IngameScript
             return all_tags;
         }
 
-        SystemStatus GetSystemStatus(string system, bool use_color = false)
+        bool AssertSystem(string system)
         {
             if (string.IsNullOrWhiteSpace(system))
             {
-                Echo("Error: No system name provided");
-                return null;
+                display.EchoError("No system name provided");
+                return false;
             }
-
             List<string> all_systems = GetAllSystems();
             if (!all_systems.Contains(system))
             {
-                Echo($"GetSystemStatus Error: System '{system}' not found");
-                return null;
+                display.EchoError($"'{system}' not found");
+                return false;
             }
+            return true;
+        }
 
+        SystemStatus GetSystemStatus(string system, bool use_color = false)
+        {
             SystemStatus status = current_systems.GetValueOrDefault(system, status_off);
-
             return status;
         }
 
         void SetSystemStatus(string system, SystemStatus status)
         {
-            if (string.IsNullOrWhiteSpace(system))
-            {
-                Echo("Error: No system name provided");
-                return;
-            }
-            List<string> all_systems = GetAllSystems();
-            if (!all_systems.Contains(system))
-            {
-                Echo($"SetSystemStatus Error: System '{system}' not found");
-                return;
-            }
             current_systems[system] = status;
         }
-
 
         public bool RunTransition(string tag, bool check_stage = true, bool positive = true)
         {
             if (!GetAllTags().Contains(tag))
             {
-                Echo($"Error: '{tag}' not found");
+                display.EchoError($"'{tag}' not found");
                 return false;
             }
 
@@ -383,7 +365,9 @@ namespace IngameScript
                 }
             }
 
-            Echo($"Transition {tag} complete.\n{success} successes\n{failure} failures");
+            display.Echo($"Transition {tag} complete.");
+            display.Echo($"{success} successes");
+            display.Echo($"{failure} failures");
             return success > 0 && failure == 0;
         }
 
@@ -393,16 +377,14 @@ namespace IngameScript
             {
                 new_state = !new_state;
             }
-
             try
             {
-                Echo($"Setting {block.CustomName} to {(new_state ? "ON" : "OFF")}");
                 action(block, new_state);
                 return true;
             }
             catch (Exception e)
             {
-                Echo($"Error on {block.CustomName}: {e.Message}");
+                display.EchoError($"{block.CustomName}: {e.Message}");
                 return false;
             }
         }

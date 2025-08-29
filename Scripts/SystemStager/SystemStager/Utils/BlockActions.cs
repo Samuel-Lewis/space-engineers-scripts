@@ -15,8 +15,6 @@ namespace IngameScript
 
             public static void BatteryBlock(IMyFunctionalBlock block, bool new_state)
             {
-                //DefaultAction(block, new_state); // TODO: NOT IMPLEMENTED
-
                 IMyBatteryBlock battery = block as IMyBatteryBlock;
                 if (battery == null) return;
 
@@ -56,6 +54,15 @@ namespace IngameScript
             public static void Light(IMyFunctionalBlock block, bool new_state)
             {
                 DefaultAction(block, new_state); // TODO: NOT IMPLEMENTED
+            }
+
+            public static void Searchlight(IMyFunctionalBlock block, bool new_state)
+            {
+                DefaultAction(block, new_state); // TODO: NOT IMPLEMENTED
+                return;
+                //IMySearchlight searchlight = block as IMySearchlight;
+                //if (searchlight == null) return;
+                //searchlight.Enabled = new_state;
             }
 
             public static void LandingGear(IMyFunctionalBlock block, bool new_state)

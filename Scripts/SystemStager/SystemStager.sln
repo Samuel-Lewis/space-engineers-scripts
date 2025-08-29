@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36212.18 d17.14
+VisualStudioVersion = 17.14.36212.18
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SystemStager", "SystemStager\SystemStager.csproj", "{B475B14E-AF75-4F78-9FB7-36DA99E0B861}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CLI", "..\..\Mixins\CLI\CLI.shproj", "{3A79288E-E133-4C1D-AB4F-92F1326D44BB}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Display", "..\..\Mixins\Display\Display.shproj", "{143F4FFB-ABF6-43FA-9188-270DD6BD3F51}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,5 +25,11 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C434D9EC-83E6-4C5E-A872-3A9CC2A8D765}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\..\Mixins\Display\Display.projitems*{143f4ffb-abf6-43fa-9188-270dd6bd3f51}*SharedItemsImports = 13
+		..\..\Mixins\CLI\CLI.projitems*{3a79288e-e133-4c1d-ab4f-92f1326d44bb}*SharedItemsImports = 13
+		..\..\Mixins\CLI\CLI.projitems*{b475b14e-af75-4f78-9fb7-36da99e0b861}*SharedItemsImports = 5
+		..\..\Mixins\Display\Display.projitems*{b475b14e-af75-4f78-9fb7-36da99e0b861}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

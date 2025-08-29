@@ -1,4 +1,5 @@
-﻿using System;
+﻿using IngameScript;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using VRage.Game.ModAPI.Ingame.Utilities;
@@ -15,11 +16,14 @@ public class CLI
     public string version = "";
     private Action<string> Echo;
 
-    public CLI(string n, string v, Action<string> echo)
+    private Program program;
+
+    public CLI(Program prog, string n, string v)
     {
+        program = prog;
+        Echo = prog.Echo;
         name = n;
         version = v;
-        Echo = echo;
         add("help", "Display help info", help);
     }
 
@@ -77,7 +81,7 @@ public class CLI
             }
             else
             {
-                Echo($"Unknown command '{command}'. Use 'help' for a list of commands.");
+                Echo($"Unknown command '{command}'.\nUse 'help' for a list of commands.");
             }
         }
     }
@@ -95,12 +99,12 @@ public class CLI
 
     public bool truthy_switch()
     {
-        return get_switch(new List<string> { "on", "enable", "true", "yes", "active" });
+        return get_switch(new List<string> { "on", "enable", "true", "yes", "active", "1" });
     }
 
     public bool falsy_switch()
     {
-        return get_switch(new List<string> { "off", "disable", "false", "no", "inactive" });
+        return get_switch(new List<string> { "off", "disable", "false", "no", "inactive", "0" });
     }
 
     private bool get_switch(List<string> names)

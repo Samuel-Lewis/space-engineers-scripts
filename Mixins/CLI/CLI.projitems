@@ -3,6 +3,12 @@
   <PropertyGroup>
     <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
     <HasSharedItems>true</HasSharedItems>
-    <SharedGUID>8a3cdcc5-4b55-4d87-a415-698a0e1ff06f</SharedGUID>
+    <SharedGUID>3a79288e-e133-4c1d-ab4f-92f1326d44bb</SharedGUID>
   </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>CLI</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)CLI.cs" />
+  </ItemGroup>
 </Project>
