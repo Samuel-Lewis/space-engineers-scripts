@@ -1,7 +1,6 @@
 ﻿using Sandbox.ModAPI.Ingame;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using VRageMath;
 
@@ -79,10 +78,10 @@ namespace IngameScript
         static string ini_block_systems = $"{ini_prefix}.systems";
 
 
-        SystemStatus status_off = new SystemStatus() { name = "standby", code = "STB", verb = "Standing down", color = Color.Red };
-        SystemStatus status_on = new SystemStatus() { name = "engaged", code = "ENG", verb = "Engaging", color = Color.Green };
-        SystemStatus status_error = new SystemStatus() { name = "error", code = "ERR", verb = "Error", color = Color.DarkViolet };
-        SystemStatus status_partial = new SystemStatus() { name = "partial", code = "PRT", verb = "Partial", color = Color.Orange };
+        SystemStatus status_off = new SystemStatus() { name = "Standby", code = "STB", verb = "Standing down", color = Color.Red };
+        SystemStatus status_on = new SystemStatus() { name = "Engaged", code = "ENG", verb = "Engaging", color = Color.Green };
+        SystemStatus status_error = new SystemStatus() { name = "Error", code = "ERR", verb = "Error", color = Color.DarkViolet };
+        SystemStatus status_partial = new SystemStatus() { name = "Partial", code = "PRT", verb = "Partial", color = Color.Orange };
 
         //
         // SCRIPT
@@ -94,47 +93,50 @@ namespace IngameScript
 
 
         CLI cli;
-        Display display;
+        DisplayLog log;
+        DisplayStatus display_status;
         MyIni _ini = null;
-
 
         Dictionary<string, SystemStatus> current_systems = new Dictionary<string, SystemStatus>();
         int current_stage = 0;
 
         Program()
         {
-            Runtime.UpdateFrequency = UpdateFrequency.Once;
-            display = new Display(this);
+            Runtime.UpdateFrequency = UpdateFrequency.Update100;
+            log = new DisplayLog(this, "Stager");
+            display_status = new DisplayStatus(this, "Stager");
 
             cli = new CLI(this, "SystemStager", "1.0");
             cli.add("stage", "[tag]: Start next stage, or start [tag].", DoStage);
             cli.add("system", "<tag>: Toggle system. Force with -on/-off", DoSystem);
             cli.add("diagnostics", "Print diagnostics", DoDiagnostics);
             cli.add("debug", "Saves debug to CustomData", DoDebug);
-            cli.add("clear", "Clears the display", display.Clear);
+            cli.add("clear", "Clears the display", log.Clear);
             cli.set_default("diagnostics");
-
-        }
-
-        public void Main(string argument, UpdateType updateSource)
-        {
-            if (updateSource != UpdateType.Terminal)
-            {
-                return;
-            }
 
             // On first boot, parse the default config
             default_tags.AddRange(default_stages);
             default_tags.AddRange(default_systems);
 
-            // Run the command
-            cli.run(argument);
+            display_status.AddStat("Stage", () => default_stages[current_stage]);
+        }
+
+        public void Main(string argument, UpdateType updateSource)
+        {
+            display_status.Update();
+
+            if (updateSource == UpdateType.Terminal)
+            {
+                // Run the command
+                cli.run(argument);
+                return;
+            }
+
         }
 
         public void DoStage()
         {
             string tag = cli.arg(1);
-            display.Echo($"{status_on.VerbString()} {tag.ToUpper()}");
 
             if (string.IsNullOrWhiteSpace(tag))
             {
@@ -142,10 +144,11 @@ namespace IngameScript
                 current_stage = current_stage % default_stages.Count;
                 tag = default_stages[current_stage];
             }
+            log.Echo($"{status_on.VerbString()} {tag.ToUpper()}");
 
             if (!default_stages.Contains(tag))
             {
-                display.EchoError($"'{tag}' not found");
+                log.EchoError($"'{tag}' not found");
                 return;
             }
 
@@ -155,7 +158,7 @@ namespace IngameScript
         public void DoSystem()
         {
             string tag = cli.arg(1);
-            display.Echo($"Selecting {tag.ToUpper()}");
+            log.Echo($"Selecting {tag.ToUpper()}");
             if (!AssertSystem(tag))
             {
                 return;
@@ -189,17 +192,17 @@ namespace IngameScript
                 status = status_on;
             }
 
-            display.Echo($"{status.VerbString()} system {tag.ToUpper()}");
+            log.Echo($"{status.VerbString()} system {tag.ToUpper()}");
             bool result = RunTransition(tag, false, positive_transition);
 
             if (result)
             {
-                display.Echo($"{status.NameString()} system {tag.ToUpper()}");
+                log.Echo($"{status.NameString()} system {tag.ToUpper()}");
                 SetSystemStatus(tag, status);
             }
             else
             {
-                display.Echo($"{status_error.NameString()} system {tag.ToUpper()}");
+                log.Echo($"{status_error.NameString()} system {tag.ToUpper()}");
                 SetSystemStatus(tag, status_error);
             }
         }
@@ -222,48 +225,41 @@ namespace IngameScript
 
         public void DoDebug()
         {
-            display.Echo("Running Debug");
+            log.Echo("Running Debug...");
 
             _ini = new MyIni();
             MyIniParseResult result;
             if (!_ini.TryParse(Me.CustomData, out result))
             {
-                display.EchoError($"Parsing CustomData:\n{result}");
-                return;
+                log.EchoError($"CustomData parse: {result}");
             }
 
-            _ini.Set(ini_global_debug, "version", cli.version);
+            _ini.AddSection(ini_global_debug);
+
+            List<string> all_systems = GetAllSystems();
+            if (all_systems == null || all_systems.Count == 0)
+            {
+                all_systems = new List<string>();
+            }
+            _ini.Set(ini_global_debug, "systems", string.Join(", ", all_systems));
             _ini.Set(ini_global_debug, "stages", string.Join(", ", default_stages));
-            _ini.Set(ini_global_debug, "systems", string.Join(", ", GetAllSystems()));
+            _ini.Set(ini_global_debug, "version", cli.version);
+
 
             Me.CustomData = _ini.ToString();
+            log.Echo("Debug Complete! See CustomData");
         }
 
-        string ReadIni(string section, string key, IMyTerminalBlock block = null)
-        {
-            if (block == null)
-            {
-                block = Me;
-            }
 
-            _ini = new MyIni();
-            MyIniParseResult result;
-
-            if (!_ini.TryParse(block.CustomData, section, out result))
-            {
-                return "";
-            }
-
-            return _ini.Get(section, key).ToString();
-        }
 
         List<string> GetAllSystems()
         {
             List<string> all_systems = new List<string>();
             all_systems.AddRange(default_systems);
 
-            List<string> strings = ReadIni(ini_global, "systems").Split(',').ToList();
-            all_systems.AddRange(strings.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList());
+            List<string> strings = IniHandler.GetStringList(Me, ini_global, "systems");
+            Echo(string.Join(", ", strings));
+            all_systems.AddRange(strings);
 
             return all_systems;
         }
@@ -280,19 +276,19 @@ namespace IngameScript
         {
             if (string.IsNullOrWhiteSpace(system))
             {
-                display.EchoError("No system name provided");
+                log.EchoError("No system name provided");
                 return false;
             }
             List<string> all_systems = GetAllSystems();
             if (!all_systems.Contains(system))
             {
-                display.EchoError($"'{system}' not found");
+                log.EchoError($"'{system}' not found");
                 return false;
             }
             return true;
         }
 
-        SystemStatus GetSystemStatus(string system, bool use_color = false)
+        SystemStatus GetSystemStatus(string system)
         {
             SystemStatus status = current_systems.GetValueOrDefault(system, status_off);
             return status;
@@ -307,7 +303,7 @@ namespace IngameScript
         {
             if (!GetAllTags().Contains(tag))
             {
-                display.EchoError($"'{tag}' not found");
+                log.EchoError($"'{tag}' not found");
                 return false;
             }
 
@@ -327,11 +323,11 @@ namespace IngameScript
                 string custom = "";
                 if (check_stage)
                 {
-                    custom = ReadIni(ini_block_stager, tag, b);
+                    custom = IniHandler.GetString(b, ini_block_stager, tag);
                 }
                 else
                 {
-                    custom = ReadIni(ini_block_systems, tag, b);
+                    custom = IniHandler.GetString(b, ini_block_systems, tag);
                 }
 
                 if (!string.IsNullOrWhiteSpace(custom))
@@ -365,9 +361,9 @@ namespace IngameScript
                 }
             }
 
-            display.Echo($"Transition {tag} complete.");
-            display.Echo($"{success} successes");
-            display.Echo($"{failure} failures");
+            log.Echo($"Transition {tag} complete.");
+            log.Echo($"{success} successes");
+            log.Echo($"{failure} failures");
             return success > 0 && failure == 0;
         }
 
@@ -384,7 +380,7 @@ namespace IngameScript
             }
             catch (Exception e)
             {
-                display.EchoError($"{block.CustomName}: {e.Message}");
+                log.EchoError($"{block.CustomName}: {e.Message}");
                 return false;
             }
         }

@@ -3,14 +3,12 @@
   <PropertyGroup>
     <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
     <HasSharedItems>true</HasSharedItems>
-    <SharedGUID>143f4ffb-abf6-43fa-9188-270dd6bd3f51</SharedGUID>
+    <SharedGUID>c4907bfb-a3ab-4083-b654-f66bff5e5012</SharedGUID>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
-    <Import_RootNamespace>Display</Import_RootNamespace>
+    <Import_RootNamespace>IniHandler</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Display.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Status.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Log.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IniHandler.cs" />
   </ItemGroup>
 </Project>

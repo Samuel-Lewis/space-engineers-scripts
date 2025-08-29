@@ -9,6 +9,8 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CLI", "..\..\Mixins\CLI\CLI
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Display", "..\..\Mixins\Display\Display.shproj", "{143F4FFB-ABF6-43FA-9188-270DD6BD3F51}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "IniHandler", "..\..\Mixins\IniHandler\IniHandler.shproj", "{C4907BFB-A3AB-4083-B654-F66BFF5E5012}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,5 +33,7 @@ Global
 		..\..\Mixins\CLI\CLI.projitems*{3a79288e-e133-4c1d-ab4f-92f1326d44bb}*SharedItemsImports = 13
 		..\..\Mixins\CLI\CLI.projitems*{b475b14e-af75-4f78-9fb7-36da99e0b861}*SharedItemsImports = 5
 		..\..\Mixins\Display\Display.projitems*{b475b14e-af75-4f78-9fb7-36da99e0b861}*SharedItemsImports = 5
+		..\..\Mixins\IniHandler\IniHandler.projitems*{b475b14e-af75-4f78-9fb7-36da99e0b861}*SharedItemsImports = 5
+		..\..\Mixins\IniHandler\IniHandler.projitems*{c4907bfb-a3ab-4083-b654-f66bff5e5012}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal
