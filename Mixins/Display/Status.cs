@@ -18,7 +18,7 @@ namespace IngameScript
                 surfaces = GetSurfaces(program, display_tag);
             }
 
-            public void AddStat(string label, Func<string> value_provider)
+            public void AddField(string label, Func<string> value_provider)
             {
                 stat_fields.Add(label, value_provider);
             }
@@ -28,7 +28,7 @@ namespace IngameScript
                 List<string> lines = new List<string>();
                 foreach (var kv in stat_fields)
                 {
-                    string value = kv.Value.Invoke();
+                    string value = kv.Value.Invoke().ToUpper();
                     lines.Add($"{kv.Key}: {value}");
                 }
 

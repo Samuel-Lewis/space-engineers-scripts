@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using VRageMath;
 
-
 namespace IngameScript
 {
     public partial class Program : MyGridProgram
@@ -23,53 +22,63 @@ namespace IngameScript
         // But it's here if you really need.
         //
 
-
-        List<string> default_stages = new List<string>() { "boot", "launch", "approach", "dock" };
-        List<string> default_systems = new List<string>() { "production", "powersaver", "combat", "tools" };
+        List<string> flight_stages = new List<string>() {
+            "boot",
+            "launch",
+            "approach",
+            "dock"
+        };
+        List<string> default_systems = new List<string>() {
+            "production",
+            "powersaver",
+            "combat",
+            "tools",
+            "ai",
+            "lights"
+        };
         List<string> default_tags = new List<string>();
 
         // Custom lookup for DataConfig by TypeId and substring match on SubtypeId
 
         // Generated from a spreadsheet
         DataStore data_store = new DataStore()
-            .Add("AirtightHangarDoor", null, "-0------", Actions.Door)
-            .Add("Assembler", null, "----10--")
-            .Add("BatteryBlock", null, "-1-0----", Actions.BatteryBlock)
-            .Add("Beacon", null, "1--0----")
-            .Add("Cockpit", null, "0100----", Actions.Cockpit)
-            .Add("Decoy", null, "---0--1-")
-            .Add("DefensiveCombatBlock", null, "--00----")
-            .Add("Door", null, "-0------", Actions.Door)
-            .Add("Drill", null, "--00---1")
-            .Add("FlightMovementBlock", null, "---0----")
-            .Add("GravityGenerator", null, "-----0--")
-            .Add("GravityGeneratorSphere", null, "-----0--")
-            .Add("Gyro", null, "-1-0----")
-            .Add("HydrogenEngine", null, "----1---")
-            .Add("InteriorLight", null, "1-----11", Actions.Light)
-            .Add("JumpDrive", null, "-----0--")
-            .Add("LandingGear", null, "-0------", Actions.LandingGear)
-            .Add("LargeGatlingTurret", "Gatling", "--00--1-")
-            .Add("LargeMissileTurret", "MediumCalibre", "--00--1-")
-            .Add("MotorAdvancedRotor", null, "---0----", Actions.Motor)
-            .Add("MotorAdvancedStator", null, "---0----", Actions.Motor)
-            .Add("MotorRotor", null, "---0----", Actions.Motor)
-            .Add("OffensiveCombatBlock", null, "---0----")
-            .Add("OreDetector", null, "---0-001")
-            .Add("OxygenGenerator", null, "----1---")
-            .Add("OxygenTank", "Oxygen", "-0-1----", Actions.Tank)
-            .Add("OxygenTank", "Hydrogen", "-0-1----", Actions.Tank)
-            .Add("Refinery", null, "----10--")
-            .Add("ReflectorLight", null, "1--0---1")
-            .Add("Searchlight", null, "1--0---1", Actions.Searchlight)
-            .Add("ShipConnector", null, "-1-0----", Actions.ShipConnector)
-            .Add("ShipGrinder", null, "---0---1")
-            .Add("ShipWelder", null, "---0---1")
-            .Add("SmallGatlingGun", null, "---0--1-")
-            .Add("SmallMissileLauncher", null, "---0--1-")
-            .Add("SmallMissileLauncherReload", null, "---0--1-")
-            .Add("SoundBlock", null, "-1-1----", Actions.SoundBlock)
-            .Add("Thrust", null, "-1-0----");
+            .Add("AirtightHangarDoor", null, "-0--------", Actions.Door)
+            .Add("Assembler", null, "----10----")
+            .Add("BatteryBlock", null, "-1-0------", Actions.Battery)
+            .Add("Beacon", null, "1--0------")
+            .Add("Cockpit", null, "0100------", Actions.Cockpit)
+            .Add("Decoy", null, "---0--1---")
+            .Add("DefensiveCombatBlock", null, "--00----1-")
+            .Add("Door", null, "-0--------", Actions.Door)
+            .Add("Drill", null, "--00---1--")
+            .Add("FlightMovementBlock", null, "---0----1-")
+            .Add("GravityGenerator", null, "-----0----")
+            .Add("GravityGeneratorSphere", null, "-----0----")
+            .Add("Gyro", null, "-1-0------")
+            .Add("HydrogenEngine", null, "----1-----")
+            .Add("InteriorLight", null, "1-----11-1", Actions.Light)
+            .Add("JumpDrive", null, "-----0----")
+            .Add("LandingGear", null, "-0--------", Actions.LandingGear)
+            .Add("LargeGatlingTurret", "Gatling", "--00--1---")
+            .Add("LargeMissileTurret", "MediumCalibre", "--00--1---")
+            .Add("MotorAdvancedRotor", null, "---0------", Actions.Motor)
+            .Add("MotorAdvancedStator", null, "---0------", Actions.Motor)
+            .Add("OffensiveCombatBlock", null, "---0----1-")
+            .Add("OreDetector", null, "---0-001--")
+            .Add("OxygenGenerator", null, "----1-----")
+            .Add("OxygenTank", "Oxygen", "-0-1------", Actions.Tank)
+            .Add("OxygenTank", "Hydrogen", "-0-1------", Actions.Tank)
+            .Add("Refinery", null, "----10----")
+            .Add("ReflectorLight", null, "1--0---1-1", Actions.Light)
+            .Add("Searchlight", null, "1--0---1-1", Actions.Light)
+            .Add("ShipConnector", null, "-1-0------", Actions.ShipConnector)
+            .Add("ShipGrinder", null, "---0---1--")
+            .Add("ShipWelder", null, "---0---1--")
+            .Add("SmallGatlingGun", null, "---0--1---")
+            .Add("SmallMissileLauncher", null, "---0--1---")
+            .Add("SmallMissileLauncherReload", null, "---0--1---")
+            .Add("SoundBlock", null, "-1-1------", Actions.SoundBlock)
+            .Add("Thrust", null, "-1-0------");
 
         static string ini_prefix = "stager";
         static string ini_global = $"{ini_prefix}.config";
@@ -77,11 +86,34 @@ namespace IngameScript
         static string ini_block_stager = $"{ini_prefix}.stages";
         static string ini_block_systems = $"{ini_prefix}.systems";
 
-
-        SystemStatus status_off = new SystemStatus() { name = "Standby", code = "STB", verb = "Standing down", color = Color.Red };
-        SystemStatus status_on = new SystemStatus() { name = "Engaged", code = "ENG", verb = "Engaging", color = Color.Green };
-        SystemStatus status_error = new SystemStatus() { name = "Error", code = "ERR", verb = "Error", color = Color.DarkViolet };
-        SystemStatus status_partial = new SystemStatus() { name = "Partial", code = "PRT", verb = "Partial", color = Color.Orange };
+        SystemStatus status_off = new SystemStatus()
+        {
+            name = "Standby",
+            code = "STB",
+            verb = "Standing down",
+            color = Color.Red
+        };
+        SystemStatus status_on = new SystemStatus()
+        {
+            name = "Engaged",
+            code = "ENG",
+            verb = "Engaging",
+            color = Color.Green
+        };
+        SystemStatus status_error = new SystemStatus()
+        {
+            name = "Error",
+            code = "ERR",
+            verb = "Error",
+            color = Color.DarkViolet
+        };
+        SystemStatus status_partial = new SystemStatus()
+        {
+            name = "Partial",
+            code = "PRT",
+            verb = "Partial",
+            color = Color.Orange
+        };
 
         //
         // SCRIPT
@@ -91,7 +123,6 @@ namespace IngameScript
 
         #endregion mdk preserve
 
-
         CLI cli;
         DisplayLog log;
         DisplayStatus display_status;
@@ -100,9 +131,12 @@ namespace IngameScript
         Dictionary<string, SystemStatus> current_systems = new Dictionary<string, SystemStatus>();
         int current_stage = 0;
 
-
         CockpitEvent cockpit_event;
         ConnectorEvent connector_event;
+
+        IniBool config_boot_on_cockpit;
+        IniBool config_launch_on_disconnect;
+        IniStringList config_systems;
 
         Program()
         {
@@ -120,17 +154,22 @@ namespace IngameScript
             cli.set_default("diagnostics");
 
             // On first boot, parse the default config
-            default_tags.AddRange(default_stages);
+            default_tags.AddRange(flight_stages);
             default_tags.AddRange(default_systems);
+
+            // CustomData configs
+            config_boot_on_cockpit = new IniBool(Me, ini_global, "boot_when_cockpit_entered", true, "HELLO TEST COMMENT BABY");
+            config_launch_on_disconnect = new IniBool(Me, ini_global, "launch_on_disconnect", false);
+            config_systems = new IniStringList(Me, ini_global, "systems", new List<string>() { });
 
             // Event Handlers
             cockpit_event = new CockpitEvent(this, OnCockpitEntered, OnCockpitExited);
             connector_event = new ConnectorEvent(this, OnConnectorConnected);
 
             // UI Updates
-            display_status.AddStat("Stage", () => default_stages[current_stage]);
-            display_status.AddStat("Cockpit", () => cockpit_event.IsDetected() ? "Occupied" : "Empty");
-            display_status.AddStat("Connector", () => connector_event.IsDetected() ? "Docked" : "Free");
+            display_status.AddField("Stage", () => $"{flight_stages[current_stage]}");
+            display_status.AddField("Cockpit", () => cockpit_event.IsDetected() ? "Occupied" : "Empty");
+            display_status.AddField("Connector", () => connector_event.IsDetected() ? "Docked" : "Free");
         }
 
         public void Main(string argument, UpdateType updateSource)
@@ -152,7 +191,7 @@ namespace IngameScript
 
         public void OnCockpitEntered(List<IMyCockpit> cockpits)
         {
-            if (current_stage == 3) // Docked
+            if (current_stage == 3 && config_boot_on_cockpit.Get())
             {
                 DoStage("boot");
             }
@@ -160,45 +199,60 @@ namespace IngameScript
 
         public void OnCockpitExited()
         {
-            if (current_stage == 0) // Booted
+            if (current_stage == 0 && config_boot_on_cockpit.Get())
             {
                 DoStage("dock");
             }
         }
 
-        public void OnConnectorConnected(List<IMyShipConnector> cockpits)
+        public void OnConnectorConnected(List<IMyShipConnector> connectors)
         {
             DoStage("dock");
         }
 
         public void OnConnectorDisconnected()
         {
-            // TODO: Maybe launch?
+            if (config_launch_on_disconnect.Get())
+            {
+                DoStage("launch");
+            }
         }
 
+        public void IncrementStage()
+        {
+            current_stage++;
+            current_stage = (current_stage + 1) % flight_stages.Count;
+        }
 
         public void DoStage(string tag)
         {
             if (string.IsNullOrWhiteSpace(tag))
             {
-                current_stage++;
-                current_stage = current_stage % default_stages.Count;
-                tag = default_stages[current_stage];
+                IncrementStage();
+                tag = flight_stages[current_stage];
             }
             log.Echo($"{status_on.VerbString()} {tag.ToUpper()}");
 
-            if (!default_stages.Contains(tag))
+            if (!flight_stages.Contains(tag))
             {
                 log.EchoError($"'{tag}' not found");
                 return;
             }
 
             bool result = RunTransition(tag);
+            if (result)
+            {
+                log.Echo($"{status_on.NameString()} {tag.ToUpper()}");
+                current_stage = flight_stages.IndexOf(tag);
+            }
+            else
+            {
+                log.Echo($"{status_error.NameString()} {tag.ToUpper()}");
+            }
         }
 
         public void DoSystem(string tag)
         {
-            log.Echo($"Selecting {tag.ToUpper()}");
             if (!AssertSystem(tag))
             {
                 return;
@@ -253,7 +307,7 @@ namespace IngameScript
             Echo($"Grid Name: {Me.CubeGrid.CustomName}");
 
             Echo("\n:: Stage ::");
-            Echo($"Current Stage: {default_stages[current_stage]}");
+            Echo($"Current Stage: {flight_stages[current_stage]}");
 
             Echo("\n:: Systems ::");
             GetAllSystems().ForEach(s =>
@@ -282,24 +336,20 @@ namespace IngameScript
                 all_systems = new List<string>();
             }
             _ini.Set(ini_global_debug, "systems", string.Join(", ", all_systems));
-            _ini.Set(ini_global_debug, "stages", string.Join(", ", default_stages));
+            _ini.Set(ini_global_debug, "stages", string.Join(", ", flight_stages));
             _ini.Set(ini_global_debug, "version", cli.version);
-
 
             Me.CustomData = _ini.ToString();
             log.Echo("Debug Complete! See CustomData");
         }
-
-
 
         List<string> GetAllSystems()
         {
             List<string> all_systems = new List<string>();
             all_systems.AddRange(default_systems);
 
-            List<string> strings = IniHandler.GetStringList(Me, ini_global, "systems");
-            Echo(string.Join(", ", strings));
-            all_systems.AddRange(strings);
+            List<string> r = config_systems.Get();
+            all_systems.AddRange(r);
 
             return all_systems;
         }
@@ -307,7 +357,7 @@ namespace IngameScript
         List<string> GetAllTags()
         {
             List<string> all_tags = new List<string>();
-            all_tags.AddRange(default_stages);
+            all_tags.AddRange(flight_stages);
             all_tags.AddRange(GetAllSystems());
             return all_tags;
         }
@@ -349,61 +399,37 @@ namespace IngameScript
 
             int tag_index = default_tags.IndexOf(tag);
             List<IMyFunctionalBlock> blocks = new List<IMyFunctionalBlock>();
-
             GridTerminalSystem.GetBlocksOfType<IMyFunctionalBlock>(blocks, b => b.CubeGrid == Me.CubeGrid);
 
             int success = 0;
             int failure = 0;
-
             bool custom_tag = tag_index < 0 || tag_index >= default_tags.Count;
 
             foreach (var b in blocks)
             {
-                // Check for override or custom tags in CustomData
-                string custom = "";
-                if (check_stage)
-                {
-                    custom = IniHandler.GetString(b, ini_block_stager, tag);
-                }
-                else
-                {
-                    custom = IniHandler.GetString(b, ini_block_systems, tag);
-                }
-
-                if (!string.IsNullOrWhiteSpace(custom))
-                {
-                    // TODO: Need to parse and act based on the custom data tag
-                    continue;
-                }
-
-                // If no tag_index, then it's not a default tag, skippies
-                if (custom_tag)
+                // Custom block processing
+                bool customProcessed = ProcessCustomBlock(b, tag, check_stage, positive);
+                if (customProcessed)
                 {
                     continue;
                 }
 
-                // Search the default data
-                DataConfig config = data_store.Search(b);
-                if (config == null || !config.HasState(tag_index))
+                // Default block processing
+                if (!custom_tag)
                 {
-                    continue;
-                }
-
-                bool new_state = config.State(tag_index).Value;
-                bool result = Act(b, new_state, config.action, positive);
-                if (result)
-                {
-                    success += 1;
-                }
-                else
-                {
-                    failure += 1;
+                    bool result = ProcessDefaultBlock(b, tag_index, tag, positive);
+                    if (result)
+                    {
+                        success += 1;
+                    }
+                    else
+                    {
+                        failure += 1;
+                    }
                 }
             }
 
-            log.Echo($"Transition {tag} complete.");
-            log.Echo($"{success} successes");
-            log.Echo($"{failure} failures");
+            log.Echo($"{success} good, {failure} errors");
             return success > 0 && failure == 0;
         }
 
@@ -423,6 +449,42 @@ namespace IngameScript
                 log.EchoError($"{block.CustomName}: {e.Message}");
                 return false;
             }
+        }
+
+        private bool ProcessCustomBlock(IMyFunctionalBlock b, string tag, bool check_stage, bool positive)
+        {
+            string custom = check_stage ? IniString.Get(b, ini_block_stager, tag) : IniString.Get(b, ini_block_systems, tag);
+            if (string.IsNullOrWhiteSpace(custom))
+                return false;
+
+            if (custom == "ignore")
+                return true;
+
+            DataConfig config = data_store.Search(b);
+            var action = (config != null && config.action != null) ? config.action : Actions.DefaultAction;
+
+            if (custom == "true")
+            {
+                Act(b, true, action, positive);
+                return true;
+            }
+            if (custom == "false")
+            {
+                Act(b, false, action, positive);
+                return true;
+            }
+            return true;
+        }
+
+        private bool ProcessDefaultBlock(IMyFunctionalBlock b, int tag_index, string tag, bool positive)
+        {
+            DataConfig config = data_store.Search(b);
+            if (config == null || !config.HasState(tag_index))
+                return false;
+
+            bool new_state = config.State(tag_index).Value;
+            bool result = Act(b, new_state, config.action, positive);
+            return result;
         }
     }
 }

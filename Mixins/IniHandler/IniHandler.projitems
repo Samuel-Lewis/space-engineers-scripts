@@ -9,6 +9,7 @@
     <Import_RootNamespace>IniHandler</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Ini.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IniHandler.cs" />
   </ItemGroup>
 </Project>

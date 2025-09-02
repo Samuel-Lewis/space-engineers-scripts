@@ -13,7 +13,7 @@ namespace IngameScript
                 block.Enabled = new_state;
             }
 
-            public static void BatteryBlock(IMyFunctionalBlock block, bool new_state)
+            public static void Battery(IMyFunctionalBlock block, bool new_state)
             {
                 IMyBatteryBlock battery = block as IMyBatteryBlock;
                 if (battery == null) return;
@@ -71,11 +71,11 @@ namespace IngameScript
                 if (gear == null) return;
                 if (new_state)
                 {
-                    gear.Lock();
+                    gear.Unlock();
                 }
                 else
                 {
-                    gear.Unlock();
+                    gear.Lock();
                 }
             }
 
@@ -97,11 +97,11 @@ namespace IngameScript
                 if (shipConnector == null) return;
                 if (new_state)
                 {
-                    shipConnector.Connect();
+                    shipConnector.Disconnect();
                 }
                 else
                 {
-                    shipConnector.Disconnect();
+                    shipConnector.Connect();
                 }
             }
 
