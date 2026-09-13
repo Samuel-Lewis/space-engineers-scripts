@@ -155,6 +155,24 @@ namespace IngameScript
             }
         }
 
+        public class IniDouble : Ini<double>
+        {
+            public IniDouble(IMyFunctionalBlock block, string section, string key, double default_value = 0, string comment = null)
+                : base(block, section, key, default_value, comment)
+            {
+            }
+
+            protected override void SetTyped(double value)
+            {
+                ini.Set(section, key, value);
+            }
+
+            protected override double GetTyped()
+            {
+                return ini.Get(section, key).ToDouble(default_value);
+            }
+        }
+
     }
 
 }

@@ -27,4 +27,5 @@
     <AdditionalFiles Include="thumb.png" />
   </ItemGroup>
   <Import Project="..\..\..\Mixins\CLI\CLI.projitems" Label="Shared" />
+  <Import Project="..\..\..\Mixins\IniHandler\IniHandler.projitems" Label="Shared" />
 </Project>

@@ -16,6 +16,7 @@ The projects use [Malware's Development Kit 2](https://github.com/malforge/mdk2)
 - Put shared helpers in MDK2 mixin `.shproj` and `.projitems` projects under `Mixins`.
 - Commit `<ProjectName>.mdk.ini`. Do not commit `<ProjectName>.mdk.local.ini`, which is for machine-specific paths and behaviour.
 - Build Release when verifying scripts because MDK2 packs and deploys Release builds by default.
+- Do not add migration paths, legacy fallbacks, backwards-compatibility shims, or cleanup for superseded behaviour unless explicitly requested. Remove obsolete behaviour outright.
 
 ## Verification
 

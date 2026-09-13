@@ -1,15 +1,68 @@
-﻿R e a d m e
+R e a d m e
 -----------
 
-Adds CustomData tags to each block on the grid, so it's easily grouped and identifiable by MotherOS.
-For example, an Assembler will be tagged with both 'assembler' and 'production'.
+Tags and names blocks on the programmable block's grid and mechanical subgrids.
 
-The script follows specific rules for modifying CustomData:
-- If CustomData is empty, it creates the [general] section and adds the tags.
-- If CustomData already contains a [general] section, it appends the tags.
-- If CustomData has existing text but NO [general] section, the script will SKIP the block to avoid overwriting data from other scripts.
+Names use the root grid as an ID before the full stop. Each hinge, rotor, or piston leading to a subgrid is added before the block name. For example:
 
-Instructions:
-1. Load this script into a Programmable Block in your Space Engineers world.
-2. Run the script.
-3. Use 'help' to see other available commands
+    Miner.Hinge Drill
+
+Text after a block's standard name is retained while its automatic number is removed:
+
+    LCD Panel 3 System Status Display
+    Miner.LCD Panel System Status Display
+
+Programmable Blocks become `PB`, Timer Blocks become `Timer`, Event Controllers become `EC`, and trailing numbers are removed from standard block type names.
+
+Setup
+-----
+
+1. Give the programmable block's root grid a name in the Info tab.
+2. Load this script into a Programmable Block.
+3. Run it with no argument. This tags and names the blocks once.
+
+Commands
+--------
+
+- `run`: tag and name blocks. This is the default command.
+- `tag`: only add tags.
+- `name`: only rename blocks.
+- `clear`: remove `[general]` tags while preserving other Custom Data.
+- `config`: show the active configuration.
+- `dump`: write the discovered block list to the programmable block's Custom Data.
+- `help`: show command help.
+
+Configuration
+-------------
+
+All script settings and naming overrides use the `[tagger]` section. Missing settings are added automatically to the programmable block's Custom Data:
+
+    [tagger]
+    include_connected_grids=false
+    run_every_minutes=0
+
+`include_connected_grids` also processes grids joined by connectors. It is disabled by default. Mechanical subgrids attached by hinges, rotors, or pistons are always processed.
+
+Set `run_every_minutes` above zero to run automatically at that interval. Keep it at `0` to disable automatic runs. Run the programmable block once after changing configuration so the schedule is reloaded.
+
+Block name overrides
+--------------------
+
+Add a naming override to an individual block's Custom Data:
+
+    [tagger]
+    name_override=Airlock
+
+If the override is on a hinge, rotor, or piston, it also becomes that subgrid's path name. For example, a hinge override of `Forearm` produces:
+
+    Miner.Forearm Drill
+
+Tags
+----
+
+Tags remain under `[general]`:
+
+    [general]
+    tags=all, drill, tool
+
+Existing valid INI Custom Data is preserved. Blocks containing Custom Data which cannot be parsed as INI are skipped when tagging. Naming can still process them, but cannot read an override from invalid Custom Data.
