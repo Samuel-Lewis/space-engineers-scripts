@@ -10,109 +10,125 @@ namespace IngameScript
 {
     public partial class Program : MyGridProgram
     {
+        #region mdk preserve
         #region mdk macros
 
-        // This script was last deployed at $MDK_DATETIME$
+// This script was last deployed at $MDK_DATETIME$
 
         #endregion mdk macros
-
-        #region mdk preserve
-
-        //
-        // CONFIGURATION
-        // Defaults are overridden by the programmable block's [tagger] Custom Data section.
-        //
+//
+// CONFIGURATION
+// Defaults are overridden by the programmable block's [tagger] Custom Data section.
+//
 
         private const string ConfigSection = "tagger";
         private const string GeneralSection = "general";
         private const string FacingTagPrefix = "facing_";
         private const string PositionTagPrefix = "position_";
 
-        private static readonly Dictionary<string, string[]> blockTypeMappings = new Dictionary<string, string[]>
+        private static readonly Dictionary<string, string[]> blockTagMappings = new Dictionary<string, string[]>
         {
-            {"AdvancedDoor", new [] {"door"}},
-            {"AirtightHangarDoor", new [] {"door"}},
-            {"AirtightSlideDoor", new [] {"door"}},
-            {"AirVent", new [] {"vent"}},
-            {"ArtificialMassBlock", new [] {"mass"}},
-            {"Assembler", new [] {"assembler", "production"}},
-            {"BasicMissionBlock", new [] {"mission"}},
-            {"BatteryBlock", new [] {"battery", "power"}},
-            {"Beacon", new [] {"beacon", "signal"}},
-            {"BroadcastController", new [] {"broadcast_controller"}},
-            {"ButtonPanel", new [] {"panel"}},
-            {"CameraBlock", new [] {"camera"}},
-            {"CargoContainer", new [] {"cargo"}},
-            {"Collector", new [] {"collector", "conveyor"}},
-            {"ControlPanel", new [] {"panel"}},
-            {"ConveyorSorter", new [] {"sorter", "conveyor"}},
-            {"CryoChamber", new [] {"cryo_chamber"}},
-            {"Decoy", new [] {"decoy", "signal"}},
-            {"DefensiveCombatBlock", new [] {"ai", "flight"}},
-            {"EmotionControllerBlock", new [] {"ai", "emotion_controller"}},
-            {"EventControllerBlock", new [] {"ai", "event_controller"}},
-            {"ExtendedPistonBase", new [] {"piston"}},
-            {"FlightMovementBlock", new [] {"ai", "flight"}},
-            {"GasGenerator", new [] {"power"}},
-            {"GasTank", new [] {"tank"}},
-            {"GravityGenerator", new [] {"gravity"}},
-            {"GravityGeneratorSphere", new [] {"gravity"}},
-            {"Gyro", new [] {"gyro", "flight"}},
-            {"HeatVent", new [] {"vent"}},
-            {"InteriorLight", new [] {"light"}},
-            {"JumpDrive", new [] {"jump_drive", "flight"}},
-            {"LandingGear", new [] {"landing_gear"}},
-            {"LargeGatlingTurret", new [] {"weapon", "turret", "gatling", "turret_gatling"}},
-            {"LargeInteriorTurret", new [] {"weapon", "turret", "interior", "turret_interior"}},
-            {"LargeMissileTurret", new [] {"weapon", "turret", "missile", "turret_missile"}},
-            {"LaserAntenna", new [] {"antenna", "signal", "laser_antenna"}},
-            {"MedicalRoom", new [] {"medical"}},
-            {"MotorAdvancedStator", new [] {"rotor", "conveyor"}},
-            {"MotorSuspension", new [] {"suspension"}},
-            {"OffensiveCombatBlock", new [] {"ai", "flight"}},
-            {"OreDetector", new [] {"ore_detector"}},
-            {"OxygenFarm", new [] {"oxygen_farm"}},
-            {"Parachute", new [] {"parachute"}},
-            {"PathRecorderBlock", new [] {"ai", "flight"}},
-            {"ProgrammableBlock", new [] {"programmable_block"}},
-            {"Projector", new [] {"projector"}},
-            {"RadioAntenna", new [] {"antenna", "signal"}},
-            {"Reactor", new [] {"reactor", "power"}},
-            {"Refinery", new [] {"refinery", "production"}},
-            {"ReflectorLight", new [] {"light"}},
-            {"RemoteControl", new [] {"remote_control", "ai", "flight"}},
-            {"SafeZoneBlock", new [] {"safe_zone"}},
-            {"Searchlight", new [] {"light"}},
-            {"SensorBlock", new [] {"sensor"}},
-            {"ShipConnector", new [] {"connector", "conveyor"}},
-            {"ShipDrill", new [] {"drill", "tool"}},
-            {"ShipGrinder", new [] {"grinder", "tool"}},
-            {"ShipMergeBlock", new [] {"merge"}},
-            {"ShipWelder", new [] {"welder", "tool"}},
-            {"SmallGatlingGun", new [] {"weapon", "gatling", "small_gatling"}},
-            {"SmallMissileLauncherReload", new [] {"weapon", "missile", "small_missile"}},
-            {"SolarPanel", new [] {"solar_panel", "power"}},
-            {"SoundBlock", new [] {"sound"}},
-            {"SpaceBall", new [] {"space_ball"}},
-            {"StoreBlock", new [] {"store"}},
-            {"TargetDummyBlock", new [] {"target_dummy", "signal"}},
-            {"TextPanel", new [] {"lcd"}},
-            {"Thrust", new [] {"thrust", "flight"}},
-            {"TimerBlock", new [] {"timer", "ai"}},
-            {"Transponder", new [] {"transponder", "signal"}},
-            {"TurretControlBlock", new [] {"turret_control"}},
-            {"UpgradeModule", new [] {"upgrade_module"}},
-            {"VirtualMass", new [] {"mass", "gravity"}},
-            {"Warhead", new [] {"warhead", "explosive", "weapon"}},
-            {"WindTurbine", new [] {"wind_turbine", "power"}},
+            {"AirtightHangarDoor", T("door")},
+            {"AirtightSlideDoor", T("door")},
+            {"AirVent", T("vent")},
+            {"Assembler", T("assembler", "production")},
+            {"BasicMissionBlock", T("mission")},
+            {"BatteryBlock", T("battery", "power")},
+            {"Beacon", T("beacon", "signal")},
+            {"BroadcastController", T("broadcast_controller")},
+            {"ButtonPanel", T("panel")},
+            {"CameraBlock", T("camera")},
+            {"CargoContainer", T("cargo")},
+            {"Cockpit", T("cockpit", "flight")},
+            {"Collector", T("collector", "conveyor")},
+            {"ContractBlock", T("contract")},
+            {"ConveyorSorter", T("sorter", "conveyor")},
+            {"CryoChamber", T("cryo_chamber")},
+            {"Decoy", T("decoy", "signal")},
+            {"DefensiveCombatBlock", T("ai", "combat", "defensive")},
+            {"Door", T("door")},
+            {"Drill", T("drill", "tool")},
+            {"EmotionControllerBlock", T("ai", "emotion_controller")},
+            {"EventControllerBlock", T("ai", "event_controller")},
+            {"ExhaustBlock", T("exhaust")},
+            {"ExtendedPistonBase", T("piston")},
+            {"FlightMovementBlock", T("ai", "flight")},
+            {"FunctionalBlock", T("functional_block")},
+            {"GravityGenerator", T("gravity")},
+            {"GravityGeneratorSphere", T("gravity")},
+            {"Gyro", T("gyro", "flight")},
+            {"HeatVentBlock", T("vent")},
+            {"HydrogenEngine", T("hydrogen_engine", "power")},
+            {"InteriorLight", T("light")},
+            {"InteriorTurret", T("weapon", "turret", "interior", "turret_interior")},
+            {"Jukebox", T("jukebox", "sound")},
+            {"JumpDrive", T("jump_drive", "flight")},
+            {"LandingGear", T("landing_gear")},
+            {"LargeGatlingTurret", T("weapon", "turret", "gatling", "turret_gatling")},
+            {"LargeMissileTurret", T("weapon", "turret", "missile", "turret_missile")},
+            {"LaserAntenna", T("antenna", "signal", "laser_antenna")},
+            {"LCDPanelsBlock", T("lcd")},
+            {"MedicalRoom", T("medical")},
+            {"MergeBlock", T("merge")},
+            {"MotorAdvancedStator", T("rotor", "conveyor")},
+            {"MotorStator", T("rotor")},
+            {"MotorSuspension", T("suspension")},
+            {"MyProgrammableBlock", T("programmable_block")},
+            {"OffensiveCombatBlock", T("ai", "combat", "offensive")},
+            {"OreDetector", T("ore_detector")},
+            {"OxygenFarm", T("oxygen_farm")},
+            {"OxygenGenerator", T("gas_generator", "production")},
+            {"OxygenTank", T("tank")},
+            {"Parachute", T("parachute")},
+            {"PathRecorderBlock", T("ai", "flight")},
+            {"PistonBase", T("piston")},
+            {"Projector", T("projector")},
+            {"RadioAntenna", T("antenna", "signal")},
+            {"Reactor", T("reactor", "power")},
+            {"Refinery", T("refinery", "production")},
+            {"ReflectorLight", T("light")},
+            {"RemoteControl", T("remote_control", "ai", "flight")},
+            {"SafeZoneBlock", T("safe_zone")},
+            {"Searchlight", T("light")},
+            {"SensorBlock", T("sensor")},
+            {"ShipConnector", T("connector", "conveyor")},
+            {"ShipGrinder", T("grinder", "tool")},
+            {"ShipWelder", T("welder", "tool")},
+            {"SmallGatlingGun", T("weapon", "gatling", "small_gatling")},
+            {"SmallMissileLauncher", T("weapon", "missile", "small_missile")},
+            {"SmallMissileLauncherReload", T("weapon", "missile", "small_missile")},
+            {"SolarPanel", T("solar_panel", "power")},
+            {"SoundBlock", T("sound")},
+            {"SpaceBall", T("space_ball")},
+            {"StoreBlock", T("store")},
+            {"SurvivalKit", T("medical", "production")},
+            {"TargetDummyBlock", T("target_dummy", "signal")},
+            {"TerminalBlock", T("terminal_block")},
+            {"TextPanel", T("lcd")},
+            {"Thrust", T("thrust", "flight")},
+            {"TimerBlock", T("timer", "ai")},
+            {"TransponderBlock", T("transponder", "signal")},
+            {"TurretControlBlock", T("turret_control", "turret", "weapon")},
+            {"UpgradeModule", T("upgrade_module")},
+            {"VendingMachine", T("store", "vending_machine")},
+            {"VirtualMass", T("mass", "gravity")},
+            {"Warhead", T("warhead", "explosive", "weapon")},
+            {"WindTurbine", T("wind_turbine", "power")},
         };
 
-        //
-        // SCRIPT
-        // Don't change anything below this line unless you *really* know what you're doing
-        //
+
+//
+// SCRIPT
+// Don't change anything below this line unless you *really* know what you're doing
+//
 
         #endregion mdk preserve
+
+
+        private static string[] T(params string[] tags)
+        {
+            return tags;
+        }
 
         private class MechanicalLink
         {
@@ -163,7 +179,7 @@ namespace IngameScript
                 ConfigSection,
                 "include_connected_grids",
                 false,
-                "Also process grids joined through connectors.");
+                "Process grids joined through connectors.");
             configRunEveryMinutes = new IniDouble(
                 Me,
                 ConfigSection,
@@ -328,26 +344,20 @@ namespace IngameScript
             }
 
             tags.Add("all");
-            var typeId = block.BlockDefinition.TypeIdString;
-            var mapped = false;
+            var typeId = block.BlockDefinition.TypeIdString.Replace("MyObjectBuilder_", "");
+            string[] mappedTags;
+            blockTagMappings.TryGetValue(typeId, out mappedTags);
 
-            foreach (var mapping in blockTypeMappings)
+            if (mappedTags == null)
             {
-                if (!typeId.Contains(mapping.Key))
-                {
-                    continue;
-                }
-
-                mapped = true;
-                foreach (var tag in mapping.Value)
+                tags.Add(typeId.ToLower());
+            }
+            else
+            {
+                foreach (var tag in mappedTags)
                 {
                     tags.Add(tag);
                 }
-            }
-
-            if (!mapped)
-            {
-                tags.Add(typeId.Replace("MyObjectBuilder_", "").ToLower());
             }
 
             if (!isStatic && spatialContext != null)

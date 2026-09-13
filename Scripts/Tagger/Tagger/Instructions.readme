@@ -1,7 +1,7 @@
 R e a d m e
 -----------
 
-Tags and names blocks on the programmable block's grid and mechanical subgrids.
+Tags and names blocks on grids and subgrids.
 
 Names use the root grid as an ID before the full stop. Each hinge, rotor, or piston leading to a subgrid is added before the block name. For example:
 
