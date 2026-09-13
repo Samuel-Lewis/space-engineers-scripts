@@ -1,14 +1,15 @@
-﻿using IngameScript;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using VRage.Game.ModAPI.Ingame.Utilities;
 
+namespace IngameScript
+{
 public class CLI
 {
     private MyCommandLine commandLine = new MyCommandLine();
-    private Dictionary<string, Action<string>> commands = new Dictionary<string, Action<string>>();
-    private Dictionary<string, string> descriptions = new Dictionary<string, string>();
+    private Dictionary<string, Action<string>> commands = new Dictionary<string, Action<string>>(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> descriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
     private string default_command = "help";
 
@@ -16,11 +17,8 @@ public class CLI
     public string version = "";
     private Action<string> Echo;
 
-    private Program program;
-
     public CLI(Program prog, string n, string v)
     {
-        program = prog;
         Echo = prog.Echo;
         name = n;
         version = v;
@@ -82,7 +80,7 @@ public class CLI
                 run(default_command);
                 return;
             }
-            else if (commands.TryGetValue(commandLine.Argument(0), out commandAction))
+            else if (commands.TryGetValue(command, out commandAction))
             {
                 commandAction(next_arg);
             }
@@ -130,4 +128,5 @@ public class CLI
     {
         return commandLine.Switch(name);
     }
+}
 }

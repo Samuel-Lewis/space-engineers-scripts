@@ -138,7 +138,7 @@ namespace IngameScript
         IniBool config_launch_on_disconnect;
         IniStringList config_systems;
 
-        Program()
+        public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
 

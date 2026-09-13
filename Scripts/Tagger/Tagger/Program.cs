@@ -116,7 +116,7 @@ namespace IngameScript
         {
             Runtime.UpdateFrequency = UpdateFrequency.Once;
 
-            cli = new CLI("Tagger", "1.1", Echo);
+            cli = new CLI(this, "Tagger", "1.1");
             cli.add("tag", "Tag blocks with INI tags", DoBlockTagging);
             cli.add("clear", "Clears [general] tags for all blocks", DoClearTags);
             cli.add("dump", "Debug: Dumps all known blocks to programmable block custom data", DoDump);
@@ -132,7 +132,7 @@ namespace IngameScript
             cli.run(argument);
         }
 
-        public void DoDump()
+        public void DoDump(string argument = null)
         {
             var blocks = GetEligibleBlocks();
             _ini = new MyIni();
@@ -143,7 +143,7 @@ namespace IngameScript
             Me.CustomData = _ini.ToString();
         }
 
-        public void DoBlockTagging()
+        public void DoBlockTagging(string argument = null)
         {
             Echo("Starting tagging...");
             var blocks = GetEligibleBlocks();
@@ -167,7 +167,7 @@ namespace IngameScript
             Echo("Tagging complete");
         }
 
-        public void DoClearTags()
+        public void DoClearTags(string argument = null)
         {
             Echo("Starting tag cleanup...");
             var blocks = GetEligibleBlocks();

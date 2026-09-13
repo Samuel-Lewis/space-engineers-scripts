@@ -6,7 +6,7 @@ using VRage.Game.ModAPI.Ingame.Utilities;
 
 namespace IngameScript
 {
-    internal partial class Program : MyGridProgram
+    public partial class Program : MyGridProgram
     {
         #region mdk macros
 
@@ -24,16 +24,13 @@ namespace IngameScript
 
         #endregion mdk preserve
 
-        private MyCommandLine _commandLine = new MyCommandLine();
-        private Dictionary<string, Action> _commands = new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase);
-
         private CLI cli;
 
         public Program()
         {
             Runtime.UpdateFrequency = UpdateFrequency.Once;
 
-            cli = new CLI("Veeq's Grid Renamer", "1.2", Echo);
+            cli = new CLI(this, "Veeq's Grid Renamer", "1.2");
             cli.add("standardise", "standardise [gridName] - Standardise naming and prefix with grid name", Standardise);
             cli.add("prefix", "prefix [gridName] - Prefix block names with grid", Prefix);
             cli.add("test", "test [gridName] - List grid names", Test);
@@ -56,12 +53,12 @@ namespace IngameScript
             return "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace(@"\*", ".*").Replace(@"\?", ".") + "$";
         }
 
-        private List<IMyTerminalBlock> GetBlocks()
+        private List<IMyTerminalBlock> GetBlocks(string gridFilterArg)
         {
             List<IMyTerminalBlock> blocks = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocks(blocks);
 
-            string gridFilterArg = _commandLine.Argument(1) ?? "*";
+            gridFilterArg = string.IsNullOrWhiteSpace(gridFilterArg) ? "*" : gridFilterArg;
             System.Text.RegularExpressions.Regex gridFilter = new System.Text.RegularExpressions.Regex(WildcardToRegex(gridFilterArg));
             blocks = blocks.Where(block => gridFilter.IsMatch(block.CubeGrid.CustomName)).ToList();
 
@@ -76,9 +73,9 @@ namespace IngameScript
             return $"[{block.CubeGrid.CustomName}]";
         }
 
-        private void Prefix()
+        private void Prefix(string gridFilterArg = null)
         {
-            List<IMyTerminalBlock> blocks = GetBlocks();
+            List<IMyTerminalBlock> blocks = GetBlocks(gridFilterArg);
 
             // Filter blocks
             blocks.RemoveAll(block =>
@@ -98,9 +95,9 @@ namespace IngameScript
             Echo($"Renamed {blocks.Count} blocks");
         }
 
-        private void Antenna()
+        private void Antenna(string gridFilterArg = null)
         {
-            List<IMyTerminalBlock> blocks = GetBlocks();
+            List<IMyTerminalBlock> blocks = GetBlocks(gridFilterArg);
             List<IMyRadioAntenna> antennas = new List<IMyRadioAntenna>();
             antennas = blocks.OfType<IMyRadioAntenna>().ToList();
 
@@ -128,9 +125,9 @@ namespace IngameScript
             return regex.IsMatch(block.CustomName);
         }
 
-        private void Standardise()
+        private void Standardise(string gridFilterArg = null)
         {
-            List<IMyTerminalBlock> blocks = GetBlocks();
+            List<IMyTerminalBlock> blocks = GetBlocks(gridFilterArg);
             foreach (var block in blocks)
             {
                 if (HasDefaultName(block))
@@ -139,8 +136,8 @@ namespace IngameScript
                 }
             }
 
-            Prefix();
-            Antenna();
+            Prefix(gridFilterArg);
+            Antenna(gridFilterArg);
         }
 
         private string GetSpecialNaming(string blockName)
@@ -163,9 +160,9 @@ namespace IngameScript
             }
         }
 
-        private void Reset()
+        private void Reset(string gridFilterArg = null)
         {
-            List<IMyTerminalBlock> blocks = GetBlocks();
+            List<IMyTerminalBlock> blocks = GetBlocks(gridFilterArg);
             foreach (var block in blocks)
             {
                 block.CustomName = block.DefinitionDisplayNameText;
@@ -174,9 +171,9 @@ namespace IngameScript
             Echo($"Force Reset {blocks.Count} block names");
         }
 
-        private void Test()
+        private void Test(string gridFilterArg = null)
         {
-            List<IMyTerminalBlock> blocks = GetBlocks();
+            List<IMyTerminalBlock> blocks = GetBlocks(gridFilterArg);
             HashSet<string> gridNames = new HashSet<string>();
 
             foreach (var block in blocks)

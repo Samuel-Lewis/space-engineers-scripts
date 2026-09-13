@@ -8,20 +8,23 @@
     <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Mal.Mdk2.PbAnalyzers" Version="2.1.13">
+    <PackageReference Include="Mal.Mdk2.PbAnalyzers" Version="2.2.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Mal.Mdk2.PbPackager" Version="2.1.5">
+    <PackageReference Include="Mal.Mdk2.PbPackager" Version="2.2.11">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Mal.Mdk2.References" Version="2.2.4" />
+    <PackageReference Include="Mal.Mdk2.References" Version="2.2.9">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <None Remove="Instructions.readme" />
     <AdditionalFiles Include="Instructions.readme" />
     <AdditionalFiles Include="thumb.png" />
   </ItemGroup>
-  <Import Project="..\..\Commander\Commander.projitems" Label="Shared" />
+  <Import Project="..\..\..\Mixins\CLI\CLI.projitems" Label="Shared" />
 </Project>

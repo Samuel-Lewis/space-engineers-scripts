@@ -5,7 +5,7 @@ VisualStudioVersion = 17.14.36212.18
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tagger", "Tagger\Tagger.csproj", "{87361B3D-6AE0-4C5F-84B2-6A378D99E830}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Commander", "..\Commander\Commander.shproj", "{0B4DA711-43DD-434A-B555-5F44AF2E4F19}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CLI", "..\..\Mixins\CLI\CLI.shproj", "{3A79288E-E133-4C1D-AB4F-92F1326D44BB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,7 +25,7 @@ Global
 		SolutionGuid = {F0FAB01C-556D-4F67-A16C-3582DEF21EBC}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		..\Commander\Commander.projitems*{0b4da711-43dd-434a-b555-5f44af2e4f19}*SharedItemsImports = 13
-		..\Commander\Commander.projitems*{87361b3d-6ae0-4c5f-84b2-6a378d99e830}*SharedItemsImports = 5
+		..\..\Mixins\CLI\CLI.projitems*{3a79288e-e133-4c1d-ab4f-92f1326d44bb}*SharedItemsImports = 13
+		..\..\Mixins\CLI\CLI.projitems*{87361b3d-6ae0-4c5f-84b2-6a378d99e830}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

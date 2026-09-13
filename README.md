@@ -1,8 +1,20 @@
 # Space Engineers Scripts
-A collection of scripts I have created for [Space Engineers](https://www.spaceengineersgame.com/).
 
-Built on top of the brilliant [Malware's Development Kit for SE](https://github.com/malware-dev/MDK-SE).
+A collection of programmable block scripts for [Space Engineers](https://www.spaceengineersgame.com/), built with [Malware's Development Kit 2](https://github.com/malforge/mdk2).
 
-## Scripts
-* [Rotor Aligner](https://steamcommunity.com/sharedfiles/filedetails/?id=3272710735) - Enables you to align rotors and hinges to specified angles.
-* [Grid Renamer](https://steamcommunity.com/sharedfiles/filedetails/?id=3272722169) - Prefixes all block names on a grid with the grid's name.
+## Projects
+
+- [Grid Renamer](Scripts/GridRenamer) prefixes block names with their grid name and standardises common names. [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3272722169)
+- [Tagger](Scripts/Tagger) assigns reusable INI tags to blocks according to block type.
+- [System Stager](Scripts/SystemStager) manages configurable flight stages and ship systems.
+- [Mixins](Mixins) contains shared command-line, display, event, and INI helpers used by the scripts.
+
+## Building
+
+Install the .NET 9 SDK and Space Engineers, then build a script in Release mode so MDK2 packs and deploys it:
+
+```powershell
+dotnet build Scripts/GridRenamer/GridRenamer/GridRenamer.csproj -c Release
+```
+
+Machine-specific MDK2 settings belong in `<ProjectName>.mdk.local.ini`; these files are ignored by Git.
