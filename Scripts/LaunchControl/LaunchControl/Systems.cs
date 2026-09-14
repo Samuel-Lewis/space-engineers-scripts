@@ -145,9 +145,10 @@ namespace IngameScript
         // The pilot, the script, and anything that sequences other blocks are never touched.
         static bool NeverManaged(IMyTerminalBlock block)
         {
-            if (block is IMyShipController || block is IMyProgrammableBlock || block is IMyTimerBlock) return true;
             string type = block.BlockDefinition.TypeIdString;
-            return type.EndsWith("EventControllerBlock") || type.EndsWith("ButtonPanel");
+            return block is IMyShipController || block is IMyProgrammableBlock
+                || type.EndsWith("TimerBlock") || type.EndsWith("EventControllerBlock")
+                || type.EndsWith("ButtonPanel");
         }
 
         static bool IsHydrogenTank(IMyTerminalBlock block)
