@@ -14,6 +14,8 @@ Text after a block's standard name is retained while its automatic number is rem
 
 Programmable Blocks become `PB`, Timer Blocks become `Timer`, Event Controllers become `EC`, and trailing numbers are removed from standard block type names.
 
+Blocks of the same type are not numbered, so several identical blocks share a name. Use `name_override` to tell them apart.
+
 Setup
 -----
 
@@ -35,26 +37,35 @@ Commands
 Configuration
 -------------
 
-All script settings and naming overrides use the `[tagger]` section. Missing settings are added automatically without comments:
+Script settings use the `[tagger]` section of the programmable block. Missing settings are added automatically without comments:
 
     [tagger]
     include_connected_grids=false
     run_every_minutes=0
-    name_override=
+    watch_config=true
+    grid_id=
 
 `include_connected_grids` also processes grids joined by connectors. It is disabled by default. Mechanical subgrids attached by hinges, rotors, or pistons are always processed.
 
-Set `run_every_minutes` above zero to run automatically at that interval. Keep it at `0` to disable automatic runs. Edits and deleted settings are detected on the next update, including while automatic runs are disabled. A changed interval restarts its countdown.
+Set `run_every_minutes` above zero to run automatically at that interval. Keep it at `0` to disable automatic runs. A changed interval restarts its countdown.
+
+`watch_config` keeps the script ticking so edits to this section are picked up within a few seconds. Turn it off to leave the programmable block idle between commands; settings are then only reloaded when a command runs.
+
+`grid_id` replaces the grid name as the ID for this block's own grid. Use it when the grid name is awkward, or on a non-English client where the script cannot recognise an unnamed grid.
 
 Invalid values use defaults and report a warning. Malformed INI is preserved while defaults are used; repairing it resumes saving. Use one key=value per line.
 
 Block name overrides
 --------------------
 
-Naming creates a blank name_override on each block. Edit it in that block's Custom Data:
+Overrides are opt-in. Add the section yourself to a block's Custom Data:
 
     [tagger]
     name_override=Airlock
+
+The override replaces the block's type name. The grid ID and any subgrid path are still applied, so the example above becomes:
+
+    Miner.Airlock
 
 If the override is on a hinge, rotor, or piston, it also becomes that subgrid's path name. For example, a hinge override of `Forearm` produces:
 
@@ -63,9 +74,27 @@ If the override is on a hinge, rotor, or piston, it also becomes that subgrid's 
 Tags
 ----
 
-Tags remain under `[general]`:
+Tags live under `[general]`:
 
     [general]
-    tags=all, drill, tool
+    tags=drill, tool
 
-Existing valid INI Custom Data is preserved. Blocks containing Custom Data which cannot be parsed as INI are skipped when tagging. Naming can still process them, but cannot read an override from invalid Custom Data.
+Every block is tagged with its type name, converted to snake_case with a leading `My` and a trailing `_block` removed:
+
+    BatteryBlock         battery
+    AirVent              air_vent
+    LCDPanelsBlock       lcd_panels
+    MyProgrammableBlock  programmable
+
+Modded blocks follow the same rule, so they are always tagged. Categories are added on top, and are listed in the `tagCategories` table at the top of the script. That table is what makes a drill `tool` and a battery `power`.
+
+Tags you add by hand are kept. Tags the script no longer produces are also kept, so run `clear` then `run` after editing the category table.
+
+Moving grids also get position and facing tags, recalculated on every run:
+
+- `position_bow`, `position_stern`, `position_port`, `position_starboard`, `position_upper`, `position_lower`, or `position_central`. Thirds are measured from the main cockpit, falling back to any ship controller.
+- `facing_forward`, `facing_backward`, `facing_left`, `facing_right`, `facing_up`, `facing_down`, on thrusters, lights, doors, and cameras.
+
+Static grids get no position or facing tags, and existing ones are removed when a ship becomes a station. A component with no cockpit or remote control has no orientation to measure against, so it gets no spatial tags either.
+
+Existing valid INI Custom Data is preserved, and a block is only written to when its tags actually change. Blocks containing Custom Data which cannot be parsed as INI are skipped when tagging. Naming can still process them, but cannot read an override from invalid Custom Data.

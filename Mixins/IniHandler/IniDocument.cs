@@ -26,7 +26,7 @@ namespace IngameScript
             {
                 this.block = block;
                 reportWarning = warning;
-                original = block.CustomData;
+                original = block.CustomData ?? "";
                 MyIniParseResult result;
                 Valid = ini.TryParse(original, out result);
                 if (!Valid)

@@ -1,7 +1,7 @@
 using Sandbox.ModAPI.Ingame;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 using VRage.Game.ModAPI.Ingame;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using VRageMath;
@@ -23,97 +23,52 @@ namespace IngameScript
 
         private const string ConfigSection = "tagger";
         private const string GeneralSection = "general";
-        private const string FacingTagPrefix = "facing_";
-        private const string PositionTagPrefix = "position_";
 
-        private static readonly Dictionary<string, string[]> blockTagMappings = new Dictionary<string, string[]>
+        // Every block is tagged with its type name in snake_case, with a leading "My" and a
+        // trailing "_block" removed: BatteryBlock becomes battery, AirVent becomes air_vent,
+        // LCDPanelsBlock becomes lcd_panels. Modded blocks follow the same rule.
+        //
+        // This table adds category tags on top of that. A type may appear in any number of
+        // categories, and a category with one member is just an alias.
+        private static readonly Dictionary<string, string> tagCategories = new Dictionary<string, string>
         {
-            {"AirtightHangarDoor", T("door")},
-            {"AirtightSlideDoor", T("door")},
-            {"AirVent", T("vent")},
-            {"Assembler", T("assembler", "production")},
-            {"BasicMissionBlock", T("mission")},
-            {"BatteryBlock", T("battery", "power")},
-            {"Beacon", T("beacon", "signal")},
-            {"BroadcastController", T("broadcast_controller")},
-            {"ButtonPanel", T("panel")},
-            {"CameraBlock", T("camera")},
-            {"CargoContainer", T("cargo")},
-            {"Cockpit", T("cockpit", "flight")},
-            {"Collector", T("collector", "conveyor")},
-            {"ContractBlock", T("contract")},
-            {"ConveyorSorter", T("sorter", "conveyor")},
-            {"CryoChamber", T("cryo_chamber")},
-            {"Decoy", T("decoy", "signal")},
-            {"DefensiveCombatBlock", T("ai", "combat", "defensive")},
-            {"Door", T("door")},
-            {"Drill", T("drill", "tool")},
-            {"EmotionControllerBlock", T("ai", "emotion_controller")},
-            {"EventControllerBlock", T("ai", "event_controller")},
-            {"ExhaustBlock", T("exhaust")},
-            {"ExtendedPistonBase", T("piston")},
-            {"FlightMovementBlock", T("ai", "flight")},
-            {"FunctionalBlock", T("functional_block")},
-            {"GravityGenerator", T("gravity")},
-            {"GravityGeneratorSphere", T("gravity")},
-            {"Gyro", T("gyro", "flight")},
-            {"HeatVentBlock", T("vent")},
-            {"HydrogenEngine", T("hydrogen_engine", "power")},
-            {"InteriorLight", T("light")},
-            {"InteriorTurret", T("weapon", "turret", "interior", "turret_interior")},
-            {"Jukebox", T("jukebox", "sound")},
-            {"JumpDrive", T("jump_drive", "flight")},
-            {"LandingGear", T("landing_gear")},
-            {"LargeGatlingTurret", T("weapon", "turret", "gatling", "turret_gatling")},
-            {"LargeMissileTurret", T("weapon", "turret", "missile", "turret_missile")},
-            {"LaserAntenna", T("antenna", "signal", "laser_antenna")},
-            {"LCDPanelsBlock", T("lcd")},
-            {"MedicalRoom", T("medical")},
-            {"MergeBlock", T("merge")},
-            {"MotorAdvancedStator", T("rotor", "conveyor")},
-            {"MotorStator", T("rotor")},
-            {"MotorSuspension", T("suspension")},
-            {"MyProgrammableBlock", T("programmable_block")},
-            {"OffensiveCombatBlock", T("ai", "combat", "offensive")},
-            {"OreDetector", T("ore_detector")},
-            {"OxygenFarm", T("oxygen_farm")},
-            {"OxygenGenerator", T("gas_generator", "production")},
-            {"OxygenTank", T("tank")},
-            {"Parachute", T("parachute")},
-            {"PathRecorderBlock", T("ai", "flight")},
-            {"PistonBase", T("piston")},
-            {"Projector", T("projector")},
-            {"RadioAntenna", T("antenna", "signal")},
-            {"Reactor", T("reactor", "power")},
-            {"Refinery", T("refinery", "production")},
-            {"ReflectorLight", T("light")},
-            {"RemoteControl", T("remote_control", "ai", "flight")},
-            {"SafeZoneBlock", T("safe_zone")},
-            {"Searchlight", T("light")},
-            {"SensorBlock", T("sensor")},
-            {"ShipConnector", T("connector", "conveyor")},
-            {"ShipGrinder", T("grinder", "tool")},
-            {"ShipWelder", T("welder", "tool")},
-            {"SmallGatlingGun", T("weapon", "gatling", "small_gatling")},
-            {"SmallMissileLauncher", T("weapon", "missile", "small_missile")},
-            {"SmallMissileLauncherReload", T("weapon", "missile", "small_missile")},
-            {"SolarPanel", T("solar_panel", "power")},
-            {"SoundBlock", T("sound")},
-            {"SpaceBall", T("space_ball")},
-            {"StoreBlock", T("store")},
-            {"SurvivalKit", T("medical", "production")},
-            {"TargetDummyBlock", T("target_dummy", "signal")},
-            {"TerminalBlock", T("terminal_block")},
-            {"TextPanel", T("lcd")},
-            {"Thrust", T("thrust", "flight")},
-            {"TimerBlock", T("timer", "ai")},
-            {"TransponderBlock", T("transponder", "signal")},
-            {"TurretControlBlock", T("turret_control", "turret", "weapon")},
-            {"UpgradeModule", T("upgrade_module")},
-            {"VendingMachine", T("store", "vending_machine")},
-            {"VirtualMass", T("mass", "gravity")},
-            {"Warhead", T("warhead", "explosive", "weapon")},
-            {"WindTurbine", T("wind_turbine", "power")},
+            {"ai",         "BasicMissionBlock DefensiveCombatBlock EmotionControllerBlock EventControllerBlock FlightMovementBlock OffensiveCombatBlock PathRecorderBlock RemoteControl TimerBlock"},
+            {"cargo",      "CargoContainer"},
+            {"combat",     "DefensiveCombatBlock OffensiveCombatBlock"},
+            {"connector",  "ShipConnector"},
+            {"conveyor",   "Collector ConveyorSorter MotorAdvancedStator ShipConnector"},
+            {"door",       "AirtightHangarDoor AirtightSlideDoor Door"},
+            {"explosive",  "Warhead"},
+            {"flight",     "Cockpit FlightMovementBlock Gyro JumpDrive PathRecorderBlock RemoteControl Thrust"},
+            {"gatling",    "LargeGatlingTurret SmallGatlingGun"},
+            {"gravity",    "GravityGenerator GravityGeneratorSphere VirtualMass"},
+            {"missile",    "LargeMissileTurret SmallMissileLauncher SmallMissileLauncherReload"},
+            {"lcd",        "LCDPanelsBlock TextPanel"},
+            {"light",      "InteriorLight ReflectorLight Searchlight"},
+            {"medical",    "CryoChamber MedicalRoom SurvivalKit"},
+            {"panel",      "ButtonPanel"},
+            {"piston",     "ExtendedPistonBase PistonBase"},
+            {"power",      "BatteryBlock HydrogenEngine Reactor SolarPanel WindTurbine"},
+            {"production", "Assembler OxygenGenerator Refinery SurvivalKit"},
+            {"rotor",      "MotorAdvancedStator MotorStator"},
+            {"signal",     "Beacon Decoy LaserAntenna RadioAntenna TargetDummyBlock TransponderBlock"},
+            {"sound",      "Jukebox SoundBlock"},
+            {"store",      "StoreBlock VendingMachine"},
+            {"tank",       "OxygenTank"},
+            {"tool",       "Drill ShipGrinder ShipWelder"},
+            {"turret",     "InteriorTurret LargeGatlingTurret LargeMissileTurret TurretControlBlock"},
+            {"vent",       "AirVent HeatVentBlock"},
+            {"weapon",     "InteriorTurret LargeGatlingTurret LargeMissileTurret SmallGatlingGun SmallMissileLauncher SmallMissileLauncherReload TurretControlBlock Warhead"},
+        };
+
+        // Shorter names for block types whose full name is unwieldy in a terminal list.
+        private static readonly Dictionary<string, string> nameShortcuts = new Dictionary<string, string>
+        {
+            {"Programmable Block", "PB"},
+            {"Automaton Programmable Block", "PB"},
+            {"Timer Block", "Timer"},
+            {"Automaton Timer Block", "Timer"},
+            {"Event Controller", "EC"},
         };
 
 
@@ -124,11 +79,18 @@ namespace IngameScript
 
         #endregion mdk preserve
 
+        private const string TagsKey = "tags";
+        private const string NameOverrideKey = "name_override";
+        private const string FacingTagPrefix = "facing_";
+        private const string PositionTagPrefix = "position_";
 
-        private static string[] T(params string[] tags)
-        {
-            return tags;
-        }
+        // Axis order used by reference-space vectors: 0 right, 1 up, 2 forward.
+        private static readonly string[] lowPositionTags = { "position_port", "position_lower", "position_stern" };
+        private static readonly string[] highPositionTags = { "position_starboard", "position_upper", "position_bow" };
+        private static readonly string[] lowFacingTags = { "facing_left", "facing_down", "facing_backward" };
+        private static readonly string[] highFacingTags = { "facing_right", "facing_up", "facing_forward" };
+
+        private static readonly char[] TagSeparators = { ',', ' ' };
 
         private class MechanicalLink
         {
@@ -147,54 +109,72 @@ namespace IngameScript
 
         private class SpatialContext
         {
-            public IMyTerminalBlock Reference;
-            public double MinimumForward;
-            public double MaximumForward;
-            public double MinimumRight;
-            public double MaximumRight;
-            public double MinimumUp;
-            public double MaximumUp;
+            public MatrixD Reference;
+            public Vector3D Minimum;
+            public Vector3D Maximum;
         }
 
         private CLI cli;
         private IniDocument configuration;
         private readonly List<string> configWarnings = new List<string>();
         private bool includeConnectedGrids;
+        private bool watchConfig;
+        private string gridIdOverride = "";
         private double runEveryMinutes;
         private double elapsedSeconds;
 
+        // Reused across every block so tagging and naming allocate one parser, not one per block.
+        private readonly MyIni blockIni = new MyIni();
+        private readonly HashSet<string> blockTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<string> sortedTags = new List<string>();
+        private readonly Dictionary<string, string[]> typeTagCache = new Dictionary<string, string[]>();
+        private readonly Dictionary<string, List<string>> categoriesByType = new Dictionary<string, List<string>>();
+
         public Program()
         {
-            cli = new CLI(this, "Tag and Name", "2.0");
-            cli.add("run", "Tag and rename blocks", DoRun);
-            cli.add("tag", "Add INI tags to blocks", DoBlockTagging);
-            cli.add("name", "Rename blocks from their grid and subgrid path", DoNaming);
-            cli.add("clear", "Clear [general] tags from blocks", DoClearTags);
-            cli.add("dump", "Write a block list to this block's Custom Data", DoDump);
-            cli.add("config", "Show the active configuration", DoConfig);
-            cli.set_default("run");
+            cli = new CLI(this, "Tag and Name", "3.0");
+            cli.Add("run", "Tag and rename blocks", DoRun);
+            cli.Add("tag", "Add INI tags to blocks", DoTag);
+            cli.Add("name", "Rename blocks from their grid and subgrid path", DoName);
+            cli.Add("clear", "Clear [general] tags from blocks", DoClearTags);
+            cli.Add("dump", "Write a block list to this block's Custom Data", DoDump);
+            cli.Add("config", "Show the active configuration", DoConfig);
+            cli.SetDefault("run");
 
+            BuildCategoryLookup();
             LoadConfiguration();
+        }
+
+        private void BuildCategoryLookup()
+        {
+            foreach (var category in tagCategories)
+            {
+                foreach (var typeId in category.Value.Split(TagSeparators, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    List<string> categories;
+                    if (!categoriesByType.TryGetValue(typeId, out categories))
+                        categoriesByType[typeId] = categories = new List<string>();
+                    categories.Add(category.Key);
+                }
+            }
         }
 
         public void Main(string argument, UpdateType updateSource)
         {
             bool command = (updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0;
             if (command || configuration.Changed) LoadConfiguration();
-            if ((updateSource & UpdateType.Update100) != 0)
+
+            if (runEveryMinutes > 0 && (updateSource & UpdateType.Update100) != 0)
             {
                 elapsedSeconds += Runtime.TimeSinceLastRun.TotalSeconds;
-                if (runEveryMinutes > 0 && elapsedSeconds >= runEveryMinutes * 60)
+                if (elapsedSeconds >= runEveryMinutes * 60)
                 {
                     elapsedSeconds = 0;
                     DoRun();
                 }
             }
 
-            if (command)
-            {
-                cli.run(argument);
-            }
+            if (command) cli.Run(argument);
         }
 
         private void LoadConfiguration()
@@ -202,167 +182,186 @@ namespace IngameScript
             configWarnings.Clear();
             configuration = new IniDocument(Me, warning => configWarnings.Add(warning));
             includeConnectedGrids = configuration.Bool(ConfigSection, "include_connected_grids", false);
+            watchConfig = configuration.Bool(ConfigSection, "watch_config", true);
+            gridIdOverride = configuration.String(ConfigSection, "grid_id").Trim();
+
             double interval = configuration.Double(ConfigSection, "run_every_minutes", 0, 0);
             if (interval != runEveryMinutes) elapsedSeconds = 0;
             runEveryMinutes = interval;
-            configuration.String(ConfigSection, "name_override");
+
+            // Recognised so it never warns as unknown, but never written: overrides are opt-in.
+            configuration.Has(ConfigSection, NameOverrideKey);
             configuration.CheckKeys(ConfigSection);
             configuration.Save();
-            Runtime.UpdateFrequency = UpdateFrequency.Update100;
+
+            Runtime.UpdateFrequency = runEveryMinutes > 0 || watchConfig
+                ? UpdateFrequency.Update100
+                : UpdateFrequency.None;
+
             foreach (string warning in configWarnings) Echo(warning);
         }
 
         public void DoConfig(string argument = null)
         {
-            Echo("[tagger]");
-            Echo("include_connected_grids=" + includeConnectedGrids.ToString().ToLower());
+            Echo("[" + ConfigSection + "]");
+            Echo("include_connected_grids=" + (includeConnectedGrids ? "true" : "false"));
             Echo("run_every_minutes=" + runEveryMinutes);
+            Echo("watch_config=" + (watchConfig ? "true" : "false"));
+            Echo("grid_id=" + gridIdOverride);
             foreach (string warning in configWarnings) Echo(warning);
         }
 
-        public void DoRun(string argument = null)
+        public void DoRun(string argument = null) { Process(true, true); }
+        public void DoName(string argument = null) { Process(true, false); }
+        public void DoTag(string argument = null) { Process(false, true); }
+
+        // One pass over the grid. Each block's Custom Data is parsed once and written back
+        // only when the result differs from what is already there.
+        private void Process(bool rename, bool tag)
         {
             var components = GetScopedComponents();
-            var renamed = RenameBlocks(components);
-            var tagged = TagBlocks(components);
-            Echo("Complete: renamed " + renamed + ", tagged " + tagged);
-        }
+            var renamed = 0;
+            var tagged = 0;
+            var unparsable = 0;
 
-        public void DoNaming(string argument = null)
-        {
-            var components = GetScopedComponents();
-            Echo("Renamed " + RenameBlocks(components) + " blocks");
-        }
-
-        public void DoBlockTagging(string argument = null)
-        {
-            var components = GetScopedComponents();
-            Echo("Tagged " + TagBlocks(components) + " blocks");
-        }
-
-        public void DoDump(string argument = null)
-        {
-            var blocks = GetScopedComponents().SelectMany(component => component.Blocks).ToList();
-            var ini = new MyIni();
-            MyIniParseResult result;
-            if (!string.IsNullOrWhiteSpace(Me.CustomData) && !ini.TryParse(Me.CustomData, out result))
+            foreach (var component in components)
             {
-                Echo("Cannot write dump: " + result);
-                return;
+                var gridId = GetComponentId(component);
+                var renameThis = rename && gridId.Length > 0;
+                if (rename && !renameThis)
+                    Echo("Skipped unnamed root grid: " + component.Root.CustomName);
+
+                var subgridPaths = renameThis ? GetSubgridPaths(component, gridId) : null;
+                var spatial = tag && !component.Root.IsStatic
+                    ? CreateSpatialContext(component)
+                    : null;
+
+                foreach (var block in component.Blocks)
+                {
+                    var valid = blockIni.TryParse(block.CustomData);
+                    if (!valid)
+                    {
+                        unparsable++;
+                        blockIni.Clear();
+                    }
+
+                    var overrideName = valid ? ReadOverride() : "";
+
+                    if (renameThis)
+                    {
+                        string path;
+                        var label = subgridPaths.TryGetValue(block.CubeGrid, out path)
+                            ? GetBlockLabel(block, overrideName, gridId, path)
+                            : "";
+                        if (label.Length > 0)
+                        {
+                            var newName = gridId + "." + (path.Length == 0 ? label : path + " " + label);
+                            if (block.CustomName != newName)
+                            {
+                                block.CustomName = newName;
+                                renamed++;
+                            }
+                        }
+                    }
+
+                    // Tagging rewrites Custom Data, so it can only run on data it could parse.
+                    if (tag && valid && WriteTags(block, spatial)) tagged++;
+                }
             }
 
-            var blockNames = blocks
-                .Select(b => b.CustomName + ", " + b.BlockDefinition.TypeIdString + ", " + b.BlockDefinition.SubtypeId)
-                .ToList();
-            ini.Set("tagger.debug", "blocks", string.Join("\n", blockNames));
-            Me.CustomData = ini.ToString();
-            Echo("Dumped " + blocks.Count + " blocks to Custom Data");
+            if (unparsable > 0)
+                Echo(unparsable + " blocks have invalid Custom Data; not tagged, and no override read");
+            if (rename) Echo("Renamed " + renamed + " blocks");
+            if (tag) Echo("Retagged " + tagged + " blocks");
         }
 
         public void DoClearTags(string argument = null)
         {
-            var blocks = GetScopedComponents().SelectMany(component => component.Blocks).ToList();
             var cleared = 0;
+            var unparsable = 0;
 
-            foreach (var block in blocks)
+            foreach (var component in GetScopedComponents())
             {
-                var ini = new MyIni();
-                MyIniParseResult result;
-                if (!ini.TryParse(block.CustomData, out result))
+                foreach (var block in component.Blocks)
                 {
-                    Echo("Skipped invalid Custom Data: " + block.CustomName);
-                    continue;
-                }
+                    if (!blockIni.TryParse(block.CustomData))
+                    {
+                        unparsable++;
+                        continue;
+                    }
 
-                if (ini.ContainsKey(GeneralSection, "tags"))
-                {
-                    ini.Delete(GeneralSection, "tags");
-                    block.CustomData = ini.ToString();
+                    if (!blockIni.ContainsKey(GeneralSection, TagsKey)) continue;
+                    blockIni.Delete(GeneralSection, TagsKey);
+                    block.CustomData = blockIni.ToString();
                     cleared++;
                 }
             }
 
+            if (unparsable > 0) Echo("Skipped " + unparsable + " blocks with invalid Custom Data");
             Echo("Cleared tags from " + cleared + " blocks");
         }
 
-        private int TagBlocks(List<MechanicalComponent> components)
+        public void DoDump(string argument = null)
         {
-            var tagged = 0;
-            var skipped = 0;
-
-            foreach (var component in components)
+            if (!blockIni.TryParse(Me.CustomData))
             {
-                var reference = GetReferenceBlock(component.Blocks, component.Root);
-                var spatialContext = reference == null
-                    ? null
-                    : CreateSpatialContext(component.Blocks, reference);
+                Echo("Cannot write dump: this block's Custom Data is not valid INI");
+                return;
+            }
 
+            var listing = new StringBuilder();
+            var count = 0;
+            foreach (var component in GetScopedComponents())
+            {
                 foreach (var block in component.Blocks)
                 {
-                    var ini = new MyIni();
-                    MyIniParseResult result;
-                    if (!ini.TryParse(block.CustomData, out result))
-                    {
-                        Echo("Skipped invalid Custom Data: " + block.CustomName);
-                        skipped++;
-                        continue;
-                    }
-
-                    var tags = GetBlockTags(block, ini, spatialContext, component.Root.IsStatic);
-                    ini.Set(GeneralSection, "tags", string.Join(", ", tags));
-                    block.CustomData = ini.ToString();
-                    tagged++;
+                    if (count > 0) listing.Append('\n');
+                    listing.Append(block.CustomName)
+                        .Append(", ").Append(block.BlockDefinition.TypeIdString)
+                        .Append(", ").Append(block.BlockDefinition.SubtypeId);
+                    count++;
                 }
             }
 
-            if (skipped > 0)
-            {
-                Echo("Skipped tagging " + skipped + " blocks with invalid Custom Data");
-            }
-            return tagged;
+            blockIni.Set(ConfigSection + "_debug", "blocks", listing.ToString());
+            Me.CustomData = blockIni.ToString();
+            Echo("Dumped " + count + " blocks to Custom Data");
         }
 
-        private List<string> GetBlockTags(
-            IMyTerminalBlock block,
-            MyIni ini,
-            SpatialContext spatialContext,
-            bool isStatic)
+//
+// TAGGING
+//
+
+        // Returns true when the block's Custom Data actually changed.
+        private bool WriteTags(IMyTerminalBlock block, SpatialContext spatial)
         {
-            var tags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var existing = ini.Get(GeneralSection, "tags").ToString();
-            foreach (var tag in existing.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+            blockTags.Clear();
+
+            // Hand-added tags survive; spatial tags are recomputed every run.
+            var existing = blockIni.Get(GeneralSection, TagsKey).ToString();
+            foreach (var tag in existing.Split(TagSeparators, StringSplitOptions.RemoveEmptyEntries))
             {
-                var trimmedTag = tag.Trim();
-                if (!IsSpatialTag(trimmedTag))
-                {
-                    tags.Add(trimmedTag);
-                }
+                if (!IsSpatialTag(tag)) blockTags.Add(tag);
             }
 
-            tags.Add("all");
-            var typeId = block.BlockDefinition.TypeIdString.Replace("MyObjectBuilder_", "");
-            string[] mappedTags;
-            blockTagMappings.TryGetValue(typeId, out mappedTags);
+            foreach (var tag in GetTypeTags(block)) blockTags.Add(tag);
 
-            if (mappedTags == null)
+            if (spatial != null)
             {
-                tags.Add(typeId.ToLower());
-            }
-            else
-            {
-                foreach (var tag in mappedTags)
-                {
-                    tags.Add(tag);
-                }
+                AddPositionTags(block, spatial);
+                AddFacingTag(block, spatial);
             }
 
-            if (!isStatic && spatialContext != null)
-            {
-                AddPositionTags(tags, block, spatialContext);
-                AddFacingTag(tags, block, spatialContext);
-            }
+            sortedTags.Clear();
+            sortedTags.AddRange(blockTags);
+            sortedTags.Sort(StringComparer.OrdinalIgnoreCase);
 
-            return tags.OrderBy(tag => tag).ToList();
+            blockIni.Set(GeneralSection, TagsKey, string.Join(", ", sortedTags));
+            var updated = blockIni.ToString();
+            if (block.CustomData == updated) return false;
+
+            block.CustomData = updated;
+            return true;
         }
 
         private bool IsSpatialTag(string tag)
@@ -371,249 +370,347 @@ namespace IngameScript
                 || tag.StartsWith(PositionTagPrefix, StringComparison.OrdinalIgnoreCase);
         }
 
+        private string[] GetTypeTags(IMyTerminalBlock block)
+        {
+            var typeId = block.BlockDefinition.TypeIdString.Replace("MyObjectBuilder_", "");
+
+            string[] cached;
+            if (typeTagCache.TryGetValue(typeId, out cached)) return cached;
+
+            var tags = new List<string> { ToTag(typeId) };
+            List<string> categories;
+            if (categoriesByType.TryGetValue(typeId, out categories)) tags.AddRange(categories);
+
+            cached = tags.ToArray();
+            typeTagCache[typeId] = cached;
+            return cached;
+        }
+
+        // BatteryBlock -> battery, AirVent -> air_vent, LCDPanelsBlock -> lcd_panels,
+        // MyProgrammableBlock -> programmable.
+        private static string ToTag(string typeId)
+        {
+            if (typeId.Length > 2 && typeId[0] == 'M' && typeId[1] == 'y' && char.IsUpper(typeId[2]))
+                typeId = typeId.Substring(2);
+
+            var builder = new StringBuilder(typeId.Length + 8);
+            for (var i = 0; i < typeId.Length; i++)
+            {
+                var current = typeId[i];
+                if (char.IsUpper(current) && i > 0)
+                {
+                    var startsWord = !char.IsUpper(typeId[i - 1])
+                        || (i + 1 < typeId.Length && char.IsLower(typeId[i + 1]));
+                    if (startsWord) builder.Append('_');
+                }
+                builder.Append(char.ToLowerInvariant(current));
+            }
+
+            var tag = builder.ToString();
+            return tag.EndsWith("_block", StringComparison.Ordinal)
+                ? tag.Substring(0, tag.Length - "_block".Length)
+                : tag;
+        }
+
+        private void AddPositionTags(IMyTerminalBlock block, SpatialContext spatial)
+        {
+            var local = ToReferenceSpace(block.GetPosition() - spatial.Reference.Translation, spatial.Reference);
+            var placed = false;
+
+            for (var axis = 0; axis < 3; axis++)
+            {
+                var tag = GetThird(
+                    Axis(local, axis),
+                    Axis(spatial.Minimum, axis),
+                    Axis(spatial.Maximum, axis),
+                    lowPositionTags[axis],
+                    highPositionTags[axis]);
+                if (tag == null) continue;
+                blockTags.Add(tag);
+                placed = true;
+            }
+
+            if (!placed) blockTags.Add("position_central");
+        }
+
+        private string GetThird(double value, double minimum, double maximum, string lowTag, string highTag)
+        {
+            var span = maximum - minimum;
+            if (span < 0.001) return null;
+
+            var proportion = (value - minimum) / span;
+            if (proportion < 1.0 / 3.0) return lowTag;
+            if (proportion > 2.0 / 3.0) return highTag;
+            return null;
+        }
+
+        private void AddFacingTag(IMyTerminalBlock block, SpatialContext spatial)
+        {
+            if (!(block is IMyThrust) && !(block is IMyLightingBlock)
+                && !(block is IMyDoor) && !(block is IMyCameraBlock)) return;
+
+            var facing = ToReferenceSpace(block.WorldMatrix.Forward, spatial.Reference);
+
+            // Forward wins ties with both other axes, right wins ties with up.
+            var dominant = 2;
+            if (Math.Abs(Axis(facing, 0)) > Math.Abs(Axis(facing, dominant))) dominant = 0;
+            if (Math.Abs(Axis(facing, 1)) > Math.Abs(Axis(facing, dominant))) dominant = 1;
+
+            blockTags.Add(Axis(facing, dominant) >= 0
+                ? highFacingTags[dominant]
+                : lowFacingTags[dominant]);
+        }
+
+        private SpatialContext CreateSpatialContext(MechanicalComponent component)
+        {
+            var reference = GetReferenceBlock(component);
+            if (reference == null) return null;
+
+            var matrix = reference.WorldMatrix;
+            var minimum = new Vector3D(double.PositiveInfinity);
+            var maximum = new Vector3D(double.NegativeInfinity);
+
+            foreach (var block in component.Blocks)
+            {
+                var local = ToReferenceSpace(block.GetPosition() - matrix.Translation, matrix);
+                minimum = Vector3D.Min(minimum, local);
+                maximum = Vector3D.Max(maximum, local);
+            }
+
+            return new SpatialContext { Reference = matrix, Minimum = minimum, Maximum = maximum };
+        }
+
+        // Bow/stern only mean something relative to a controller. Without one there is no
+        // orientation worth guessing at, so the component gets no spatial tags.
+        private IMyTerminalBlock GetReferenceBlock(MechanicalComponent component)
+        {
+            IMyShipController rootMainCockpit = null;
+            IMyShipController anyMainCockpit = null;
+            IMyShipController rootController = null;
+            IMyShipController anyController = null;
+            var hasLocalBlocks = false;
+
+            foreach (var block in component.Blocks)
+            {
+                if (block.CubeGrid == Me.CubeGrid) hasLocalBlocks = true;
+
+                var controller = block as IMyShipController;
+                if (controller == null) continue;
+                var onRoot = controller.CubeGrid == component.Root;
+
+                var cockpit = controller as IMyCockpit;
+                if (cockpit != null && cockpit.IsMainCockpit)
+                {
+                    if (onRoot && rootMainCockpit == null) rootMainCockpit = controller;
+                    if (anyMainCockpit == null) anyMainCockpit = controller;
+                }
+
+                if (onRoot && rootController == null) rootController = controller;
+                if (anyController == null) anyController = controller;
+            }
+
+            if (rootMainCockpit != null) return rootMainCockpit;
+            if (anyMainCockpit != null) return anyMainCockpit;
+            if (rootController != null) return rootController;
+            if (anyController != null) return anyController;
+            return hasLocalBlocks ? Me : null;
+        }
+
+        private static Vector3D ToReferenceSpace(Vector3D offset, MatrixD reference)
+        {
+            return new Vector3D(
+                Vector3D.Dot(offset, reference.Right),
+                Vector3D.Dot(offset, reference.Up),
+                Vector3D.Dot(offset, reference.Forward));
+        }
+
+        private static double Axis(Vector3D value, int index)
+        {
+            return index == 0 ? value.X : index == 1 ? value.Y : value.Z;
+        }
+
+//
+// NAMING
+//
+
+        private string GetComponentId(MechanicalComponent component)
+        {
+            if (gridIdOverride.Length > 0 && component.Grids.Contains(Me.CubeGrid)) return gridIdOverride;
+
+            var name = component.Root.CustomName == null ? "" : component.Root.CustomName.Trim();
+            return IsDefaultGridName(name) ? "" : name;
+        }
+
+        // The game names a new grid "<size> Grid <id>". Only the English defaults are
+        // recognised; on any other client, set [tagger] grid_id or rename the grid.
+        private bool IsDefaultGridName(string name)
+        {
+            var prefixLength = 0;
+            if (name.StartsWith("Small Grid ", StringComparison.Ordinal)) prefixLength = 11;
+            else if (name.StartsWith("Large Grid ", StringComparison.Ordinal)) prefixLength = 11;
+            else if (name.StartsWith("Static Grid ", StringComparison.Ordinal)) prefixLength = 12;
+            else return false;
+
+            if (prefixLength >= name.Length) return false;
+            for (var i = prefixLength; i < name.Length; i++)
+                if (!char.IsDigit(name[i])) return false;
+            return true;
+        }
+
+        // Path segments for each grid in the component, keyed by grid. The root maps to "".
+        private Dictionary<IMyCubeGrid, string> GetSubgridPaths(MechanicalComponent component, string gridId)
+        {
+            var paths = new Dictionary<IMyCubeGrid, string>();
+            paths[component.Root] = "";
+
+            var pending = new Queue<IMyCubeGrid>();
+            pending.Enqueue(component.Root);
+
+            while (pending.Count > 0)
+            {
+                var parent = pending.Dequeue();
+                var parentPath = paths[parent];
+
+                foreach (var link in component.Links)
+                {
+                    if (link.Parent != parent || paths.ContainsKey(link.Child)) continue;
+
+                    // Parses the joint's Custom Data; the main pass parses it again as a block.
+                    var overrideName = blockIni.TryParse(link.Joint.CustomData) ? ReadOverride() : "";
+                    var label = GetBlockLabel(link.Joint, overrideName, gridId, parentPath);
+                    paths[link.Child] = label.Length == 0 ? parentPath
+                        : parentPath.Length == 0 ? label
+                        : parentPath + " " + label;
+                    pending.Enqueue(link.Child);
+                }
+            }
+
+            return paths;
+        }
+
+        private string ReadOverride()
+        {
+            return blockIni.Get(ConfigSection, NameOverrideKey).ToString().Trim();
+        }
+
+        // The block's part of the name: its type name (or override) plus any text the user
+        // added after it. The grid ID and subgrid path are added by the caller.
+        private string GetBlockLabel(IMyTerminalBlock block, string overrideName, string gridId, string subgridPath)
+        {
+            var standardName = GetStandardBlockName(GetDefinitionName(block));
+            var name = overrideName.Length > 0 ? overrideName : standardName;
+            if (name.Length == 0) return "";
+
+            var retained = GetRetainedText(block, standardName, overrideName, gridId, subgridPath);
+            return retained.Length == 0 ? name : name + " " + retained;
+        }
+
+        // Modded blocks can leave this unset, in which case there is no type name to work from.
+        private static string GetDefinitionName(IMyTerminalBlock block)
+        {
+            return block.DefinitionDisplayNameText == null ? "" : block.DefinitionDisplayNameText.Trim();
+        }
+
+        private string GetStandardBlockName(string definitionName)
+        {
+            var name = RemoveTrailingNumber(definitionName.Trim());
+            string shortcut;
+            return nameShortcuts.TryGetValue(name, out shortcut) ? shortcut : name;
+        }
+
+        // Text the user typed after the block's type name, which naming must not eat.
+        // The prefix this script generates is removed first, so a grid called "Drill Rig"
+        // cannot be mistaken for the drill's own name.
+        private string GetRetainedText(
+            IMyTerminalBlock block,
+            string standardName,
+            string overrideName,
+            string gridId,
+            string subgridPath)
+        {
+            var current = block.CustomName == null ? "" : block.CustomName.Trim();
+            current = RemovePrefix(current, gridId + ".");
+            if (subgridPath.Length > 0) current = RemovePrefix(current, subgridPath + " ");
+
+            var bestIndex = -1;
+            var bestLength = 0;
+            MatchAlias(current, GetDefinitionName(block), ref bestIndex, ref bestLength);
+            MatchAlias(current, standardName, ref bestIndex, ref bestLength);
+            MatchAlias(current, overrideName, ref bestIndex, ref bestLength);
+            if (bestIndex < 0) return "";
+
+            var retained = current.Substring(bestIndex + bestLength).TrimStart();
+
+            // Drop the game's automatic number, e.g. "LCD Panel 3 Cargo" keeps only "Cargo".
+            var digits = 0;
+            while (digits < retained.Length && char.IsDigit(retained[digits])) digits++;
+            if (digits > 0 && (digits == retained.Length || char.IsWhiteSpace(retained[digits])))
+                retained = retained.Substring(digits).TrimStart();
+
+            return retained.Trim();
+        }
+
+        // Earliest whole-word match wins; the longest alias breaks a tie.
+        private void MatchAlias(string current, string alias, ref int bestIndex, ref int bestLength)
+        {
+            if (string.IsNullOrWhiteSpace(alias)) return;
+
+            var index = current.IndexOf(alias, StringComparison.OrdinalIgnoreCase);
+            while (index >= 0 && !IsNameBoundary(current, index, alias.Length))
+                index = current.IndexOf(alias, index + 1, StringComparison.OrdinalIgnoreCase);
+            if (index < 0) return;
+
+            if (bestIndex < 0 || index < bestIndex || (index == bestIndex && alias.Length > bestLength))
+            {
+                bestIndex = index;
+                bestLength = alias.Length;
+            }
+        }
+
+        private static string RemovePrefix(string value, string prefix)
+        {
+            return prefix.Length > 1 && value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                ? value.Substring(prefix.Length).TrimStart()
+                : value;
+        }
+
+        private bool IsNameBoundary(string value, int index, int length)
+        {
+            var validStart = index == 0 || value[index - 1] == '.' || char.IsWhiteSpace(value[index - 1]);
+            var end = index + length;
+            var validEnd = end == value.Length || char.IsWhiteSpace(value[end]);
+            return validStart && validEnd;
+        }
+
+        private string RemoveTrailingNumber(string value)
+        {
+            var end = value.Length - 1;
+            while (end >= 0 && char.IsDigit(value[end])) end--;
+
+            if (end == value.Length - 1 || end < 0 || !char.IsWhiteSpace(value[end])) return value;
+            return value.Substring(0, end).TrimEnd();
+        }
+
+//
+// GRID DISCOVERY
+//
+
         private List<MechanicalComponent> GetScopedComponents()
         {
             var allBlocks = new List<IMyTerminalBlock>();
             GridTerminalSystem.GetBlocks(allBlocks);
 
-            var links = GetMechanicalLinks(allBlocks);
-            var components = GetMechanicalComponents(allBlocks, links);
+            var components = GetMechanicalComponents(allBlocks, GetMechanicalLinks(allBlocks));
             if (!includeConnectedGrids)
-            {
-                components = components.Where(component => component.Grids.Contains(Me.CubeGrid)).ToList();
-            }
+                components = components.FindAll(component => component.Grids.Contains(Me.CubeGrid));
 
-            var blockCount = components.Sum(component => component.Blocks.Count);
+            var blockCount = 0;
+            foreach (var component in components) blockCount += component.Blocks.Count;
+
             Echo(includeConnectedGrids
                 ? "Found " + blockCount + " blocks, including connected grids"
                 : "Found " + blockCount + " blocks on this grid and its mechanical subgrids");
             return components;
-        }
-
-        private List<MechanicalComponent> GetMechanicalComponents(
-            List<IMyTerminalBlock> blocks,
-            List<MechanicalLink> links)
-        {
-            var components = new List<MechanicalComponent>();
-            var remaining = new HashSet<IMyCubeGrid>(blocks.Select(block => block.CubeGrid));
-
-            while (remaining.Count > 0)
-            {
-                var seed = remaining.First();
-                var grids = new HashSet<IMyCubeGrid>();
-                var pending = new Queue<IMyCubeGrid>();
-                grids.Add(seed);
-                pending.Enqueue(seed);
-
-                while (pending.Count > 0)
-                {
-                    var grid = pending.Dequeue();
-                    foreach (var link in links)
-                    {
-                        var neighbour = link.Parent == grid
-                            ? link.Child
-                            : link.Child == grid ? link.Parent : null;
-                        if (neighbour != null && remaining.Contains(neighbour) && grids.Add(neighbour))
-                        {
-                            pending.Enqueue(neighbour);
-                        }
-                    }
-                }
-
-                foreach (var grid in grids)
-                {
-                    remaining.Remove(grid);
-                }
-
-                var componentLinks = links
-                    .Where(link => grids.Contains(link.Parent) && grids.Contains(link.Child))
-                    .ToList();
-                var childGrids = new HashSet<IMyCubeGrid>(componentLinks.Select(link => link.Child));
-                components.Add(new MechanicalComponent
-                {
-                    Blocks = blocks.Where(block => grids.Contains(block.CubeGrid)).ToList(),
-                    Grids = grids,
-                    Links = componentLinks,
-                    Root = grids.FirstOrDefault(grid => !childGrids.Contains(grid)) ?? seed
-                });
-            }
-
-            return components;
-        }
-
-        private IMyTerminalBlock GetReferenceBlock(List<IMyTerminalBlock> blocks, IMyCubeGrid rootGrid)
-        {
-            var rootBlocks = blocks.Where(block => block.CubeGrid == rootGrid).ToList();
-            var mainCockpit = rootBlocks.OfType<IMyCockpit>().FirstOrDefault(cockpit => cockpit.IsMainCockpit)
-                ?? blocks.OfType<IMyCockpit>().FirstOrDefault(cockpit => cockpit.IsMainCockpit);
-            if (mainCockpit != null)
-            {
-                return mainCockpit;
-            }
-
-            var controller = rootBlocks.OfType<IMyShipController>().FirstOrDefault()
-                ?? blocks.OfType<IMyShipController>().FirstOrDefault();
-            if (controller != null)
-            {
-                return controller;
-            }
-
-            if (blocks.Any(block => block.CubeGrid == Me.CubeGrid))
-            {
-                return Me;
-            }
-
-            return rootBlocks.FirstOrDefault() ?? blocks.FirstOrDefault();
-        }
-
-        private SpatialContext CreateSpatialContext(
-            List<IMyTerminalBlock> blocks,
-            IMyTerminalBlock reference)
-        {
-            var context = new SpatialContext
-            {
-                Reference = reference,
-                MinimumForward = double.PositiveInfinity,
-                MaximumForward = double.NegativeInfinity,
-                MinimumRight = double.PositiveInfinity,
-                MaximumRight = double.NegativeInfinity,
-                MinimumUp = double.PositiveInfinity,
-                MaximumUp = double.NegativeInfinity
-            };
-
-            foreach (var block in blocks)
-            {
-                var offset = block.GetPosition() - reference.GetPosition();
-                var forward = Vector3D.Dot(offset, reference.WorldMatrix.Forward);
-                var right = Vector3D.Dot(offset, reference.WorldMatrix.Right);
-                var up = Vector3D.Dot(offset, reference.WorldMatrix.Up);
-                context.MinimumForward = Math.Min(context.MinimumForward, forward);
-                context.MaximumForward = Math.Max(context.MaximumForward, forward);
-                context.MinimumRight = Math.Min(context.MinimumRight, right);
-                context.MaximumRight = Math.Max(context.MaximumRight, right);
-                context.MinimumUp = Math.Min(context.MinimumUp, up);
-                context.MaximumUp = Math.Max(context.MaximumUp, up);
-            }
-
-            return context;
-        }
-
-        private void AddPositionTags(HashSet<string> tags, IMyTerminalBlock block, SpatialContext context)
-        {
-            var offset = block.GetPosition() - context.Reference.GetPosition();
-            var forward = Vector3D.Dot(offset, context.Reference.WorldMatrix.Forward);
-            var right = Vector3D.Dot(offset, context.Reference.WorldMatrix.Right);
-            var up = Vector3D.Dot(offset, context.Reference.WorldMatrix.Up);
-
-            var positionTags = new[]
-            {
-                GetThird(forward, context.MinimumForward, context.MaximumForward, "position_stern", "position_bow"),
-                GetThird(right, context.MinimumRight, context.MaximumRight, "position_port", "position_starboard"),
-                GetThird(up, context.MinimumUp, context.MaximumUp, "position_lower", "position_upper")
-            };
-
-            foreach (var positionTag in positionTags.Where(tag => tag != null))
-            {
-                tags.Add(positionTag);
-            }
-            if (positionTags.All(tag => tag == null))
-            {
-                tags.Add("position_central");
-            }
-        }
-
-        private string GetThird(
-            double value,
-            double minimum,
-            double maximum,
-            string lowTag,
-            string highTag)
-        {
-            var span = maximum - minimum;
-            if (span < 0.001)
-            {
-                return null;
-            }
-
-            var proportion = (value - minimum) / span;
-            if (proportion < 1.0 / 3.0)
-            {
-                return lowTag;
-            }
-            if (proportion > 2.0 / 3.0)
-            {
-                return highTag;
-            }
-            return null;
-        }
-
-        private void AddFacingTag(HashSet<string> tags, IMyTerminalBlock block, SpatialContext context)
-        {
-            if (!(block is IMyThrust)
-                && !(block is IMyLightingBlock)
-                && !(block is IMyDoor)
-                && !(block is IMyCameraBlock))
-            {
-                return;
-            }
-
-            var facing = block.WorldMatrix.Forward;
-            var forward = Vector3D.Dot(facing, context.Reference.WorldMatrix.Forward);
-            var right = Vector3D.Dot(facing, context.Reference.WorldMatrix.Right);
-            var up = Vector3D.Dot(facing, context.Reference.WorldMatrix.Up);
-
-            if (Math.Abs(forward) >= Math.Abs(right) && Math.Abs(forward) >= Math.Abs(up))
-            {
-                tags.Add(forward >= 0 ? "facing_forward" : "facing_backward");
-            }
-            else if (Math.Abs(right) >= Math.Abs(up))
-            {
-                tags.Add(right >= 0 ? "facing_right" : "facing_left");
-            }
-            else
-            {
-                tags.Add(up >= 0 ? "facing_up" : "facing_down");
-            }
-        }
-
-        private int RenameBlocks(List<MechanicalComponent> components)
-        {
-            var renamed = 0;
-
-            foreach (var component in components)
-            {
-                var gridId = GetGridName(component.Root);
-                if (string.IsNullOrWhiteSpace(gridId))
-                {
-                    Echo("Skipped unnamed root grid: " + component.Root.CustomName);
-                    continue;
-                }
-
-                var subgridNames = GetSubgridNames(component);
-                foreach (var block in component.Blocks)
-                {
-                    string subgridName;
-                    if (!subgridNames.TryGetValue(block.CubeGrid, out subgridName))
-                    {
-                        continue;
-                    }
-
-                    var descriptiveName = GetBlockName(block);
-                    if (!string.IsNullOrWhiteSpace(subgridName))
-                    {
-                        descriptiveName = subgridName + " " + descriptiveName;
-                    }
-
-                    var newName = gridId + "." + descriptiveName;
-                    if (block.CustomName != newName)
-                    {
-                        block.CustomName = newName;
-                        renamed++;
-                    }
-                }
-            }
-
-            return renamed;
         }
 
         private List<MechanicalLink> GetMechanicalLinks(List<IMyTerminalBlock> blocks)
@@ -622,165 +719,99 @@ namespace IngameScript
             foreach (var block in blocks)
             {
                 var joint = block as IMyMechanicalConnectionBlock;
-                if (joint == null || joint.TopGrid == null)
-                {
-                    continue;
-                }
+                if (joint == null || joint.TopGrid == null) continue;
 
-                links.Add(new MechanicalLink
-                {
-                    Parent = block.CubeGrid,
-                    Child = joint.TopGrid,
-                    Joint = block
-                });
+                links.Add(new MechanicalLink { Parent = block.CubeGrid, Child = joint.TopGrid, Joint = block });
             }
             return links;
         }
 
-        private Dictionary<IMyCubeGrid, string> GetSubgridNames(MechanicalComponent component)
+        private List<MechanicalComponent> GetMechanicalComponents(
+            List<IMyTerminalBlock> blocks,
+            List<MechanicalLink> links)
         {
-            var names = new Dictionary<IMyCubeGrid, string>();
+            var blocksByGrid = new Dictionary<IMyCubeGrid, List<IMyTerminalBlock>>();
+            foreach (var block in blocks)
+            {
+                List<IMyTerminalBlock> gridBlocks;
+                if (!blocksByGrid.TryGetValue(block.CubeGrid, out gridBlocks))
+                    blocksByGrid[block.CubeGrid] = gridBlocks = new List<IMyTerminalBlock>();
+                gridBlocks.Add(block);
+            }
+
+            var linksByGrid = new Dictionary<IMyCubeGrid, List<MechanicalLink>>();
+            foreach (var link in links)
+            {
+                AddLink(linksByGrid, link.Parent, link);
+                AddLink(linksByGrid, link.Child, link);
+            }
+
+            var components = new List<MechanicalComponent>();
+            var visited = new HashSet<IMyCubeGrid>();
             var pending = new Queue<IMyCubeGrid>();
-            names[component.Root] = "";
-            pending.Enqueue(component.Root);
 
-            while (pending.Count > 0)
+            foreach (var seed in blocksByGrid.Keys)
             {
-                var parent = pending.Dequeue();
-                foreach (var link in component.Links.Where(link => link.Parent == parent))
+                if (!visited.Add(seed)) continue;
+
+                var grids = new List<IMyCubeGrid> { seed };
+                var componentLinks = new List<MechanicalLink>();
+                var childGrids = new HashSet<IMyCubeGrid>();
+                pending.Enqueue(seed);
+
+                while (pending.Count > 0)
                 {
-                    if (names.ContainsKey(link.Child))
+                    var grid = pending.Dequeue();
+                    List<MechanicalLink> gridLinks;
+                    if (!linksByGrid.TryGetValue(grid, out gridLinks)) continue;
+
+                    foreach (var link in gridLinks)
                     {
-                        continue;
+                        var neighbour = link.Parent == grid ? link.Child : link.Parent;
+                        if (!blocksByGrid.ContainsKey(neighbour)) continue;
+
+                        if (link.Parent == grid)
+                        {
+                            componentLinks.Add(link);
+                            childGrids.Add(link.Child);
+                        }
+
+                        if (visited.Add(neighbour))
+                        {
+                            grids.Add(neighbour);
+                            pending.Enqueue(neighbour);
+                        }
                     }
-
-                    var parentName = names[parent];
-                    var jointName = GetBlockName(link.Joint);
-                    names[link.Child] = string.IsNullOrWhiteSpace(parentName)
-                        ? jointName
-                        : parentName + " " + jointName;
-                    pending.Enqueue(link.Child);
                 }
-            }
 
-            return names;
-        }
-
-        private string GetGridName(IMyCubeGrid grid)
-        {
-            var name = grid.CustomName == null ? "" : grid.CustomName.Trim();
-            if (name.StartsWith("Small Grid ") || name.StartsWith("Large Grid ") || name.StartsWith("Static Grid "))
-            {
-                return "";
-            }
-            return name;
-        }
-
-        private string GetBlockName(IMyTerminalBlock block)
-        {
-            var standardName = GetStandardBlockName(block.DefinitionDisplayNameText);
-            var ini = new IniDocument(block, warning => Echo(warning));
-            var overrideName = ini.String(ConfigSection, "name_override").Trim();
-            ini.Save();
-
-            var suffix = GetBlockNameSuffix(block, standardName, overrideName);
-            var name = string.IsNullOrWhiteSpace(overrideName) ? standardName : overrideName;
-            return string.IsNullOrWhiteSpace(suffix) ? name : name + " " + suffix;
-        }
-
-        private string GetStandardBlockName(string definitionName)
-        {
-            var name = RemoveTrailingNumber(definitionName.Trim());
-            switch (name)
-            {
-                case "Programmable Block":
-                case "Automaton Programmable Block":
-                    return "PB";
-
-                case "Timer Block":
-                case "Automaton Timer Block":
-                    return "Timer";
-
-                case "Event Controller":
-                    return "EC";
-
-                default:
-                    return name;
-            }
-        }
-
-        private string GetBlockNameSuffix(IMyTerminalBlock block, string standardName, string overrideName)
-        {
-            var aliases = new[]
-            {
-                block.DefinitionDisplayNameText.Trim(),
-                standardName,
-                overrideName
-            }
-                .Where(alias => !string.IsNullOrWhiteSpace(alias))
-                .Distinct(StringComparer.OrdinalIgnoreCase);
-
-            var currentName = block.CustomName == null ? "" : block.CustomName.Trim();
-            var bestIndex = -1;
-            var bestLength = 0;
-
-            foreach (var alias in aliases)
-            {
-                var index = currentName.LastIndexOf(alias, StringComparison.OrdinalIgnoreCase);
-                if (index < 0 || !IsNameBoundary(currentName, index, alias.Length))
+                var componentBlocks = new List<IMyTerminalBlock>();
+                IMyCubeGrid root = null;
+                foreach (var grid in grids)
                 {
-                    continue;
+                    componentBlocks.AddRange(blocksByGrid[grid]);
+                    if (root == null && !childGrids.Contains(grid)) root = grid;
                 }
 
-                if (index > bestIndex || (index == bestIndex && alias.Length > bestLength))
+                components.Add(new MechanicalComponent
                 {
-                    bestIndex = index;
-                    bestLength = alias.Length;
-                }
+                    Blocks = componentBlocks,
+                    Grids = new HashSet<IMyCubeGrid>(grids),
+                    Links = componentLinks,
+                    Root = root ?? seed
+                });
             }
 
-            if (bestIndex < 0)
-            {
-                return "";
-            }
-
-            var suffix = currentName.Substring(bestIndex + bestLength).TrimStart();
-            var digitCount = 0;
-            while (digitCount < suffix.Length && char.IsDigit(suffix[digitCount]))
-            {
-                digitCount++;
-            }
-
-            if (digitCount > 0 && (digitCount == suffix.Length || char.IsWhiteSpace(suffix[digitCount])))
-            {
-                suffix = suffix.Substring(digitCount).TrimStart();
-            }
-
-            return suffix.Trim();
+            return components;
         }
 
-        private bool IsNameBoundary(string value, int index, int length)
+        private static void AddLink(
+            Dictionary<IMyCubeGrid, List<MechanicalLink>> map,
+            IMyCubeGrid grid,
+            MechanicalLink link)
         {
-            var hasValidStart = index == 0 || value[index - 1] == '.' || char.IsWhiteSpace(value[index - 1]);
-            var end = index + length;
-            var hasValidEnd = end == value.Length || char.IsWhiteSpace(value[end]);
-            return hasValidStart && hasValidEnd;
-        }
-
-        private string RemoveTrailingNumber(string value)
-        {
-            var end = value.Length - 1;
-            while (end >= 0 && char.IsDigit(value[end]))
-            {
-                end--;
-            }
-
-            if (end == value.Length - 1 || end < 0 || !char.IsWhiteSpace(value[end]))
-            {
-                return value;
-            }
-
-            return value.Substring(0, end).TrimEnd();
+            List<MechanicalLink> gridLinks;
+            if (!map.TryGetValue(grid, out gridLinks)) map[grid] = gridLinks = new List<MechanicalLink>();
+            gridLinks.Add(link);
         }
     }
 }

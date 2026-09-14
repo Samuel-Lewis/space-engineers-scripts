@@ -23,8 +23,8 @@ The projects use [Malware's Development Kit 2](https://github.com/malforge/mdk2)
 Build each script project directly:
 
 ```powershell
-dotnet build Scripts/GridRenamer/GridRenamer/GridRenamer.csproj -c Release
 dotnet build Scripts/Tagger/Tagger/Tagger.csproj -c Release
+dotnet build Scripts/SystemStager/SystemStager/SystemStager.csproj -c Release
 dotnet build Scripts/LaunchControl/LaunchControl/LaunchControl.csproj -c Release
 ```
 

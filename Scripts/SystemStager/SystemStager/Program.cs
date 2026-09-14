@@ -36,19 +36,19 @@ namespace IngameScript
         public Program()
         {
             cli = new CLI(this, "SystemStager", "2.0");
-            cli.add("stage", "<name> [-force]: select a stage; force bypasses takeoff readiness only", CommandStage);
-            cli.add("preflight", "Prepare the ship and start the takeoff countdown", arg => CommandStage("preflight"));
-            cli.add("takeoff", "Release the ship after checking readiness", arg => CommandStage("takeoff"));
-            cli.add("flight", "Select flight settings", arg => CommandStage("flight"));
-            cli.add("approach", "Prepare the ship and start the landing countdown", arg => CommandStage("approach"));
-            cli.add("landing", "Start Landing immediately, skipping the Approach delay", arg => CommandStage("landing"));
-            cli.add("docked", "Stand down only while connected", arg => CommandStage("docked"));
-            cli.add("pause", "Pause automatic transitions (does not stop another PB)", arg => SetPaused(true));
-            cli.add("resume", "Resume automatic transitions", arg => SetPaused(false));
-            cli.add("reload", "Reload configuration and discover blocks without replaying actions", arg => notice = "Configuration and blocks reloaded.");
-            cli.add("retry", "Reload and retry the current stage, including its hooks", arg => Retry());
-            cli.add("status", "Print current stage, readiness and errors", arg => Render());
-            cli.set_default("status");
+            cli.Add("stage", "<name> [-force]: select a stage; force bypasses takeoff readiness only", CommandStage);
+            cli.Add("preflight", "Prepare the ship and start the takeoff countdown", arg => CommandStage("preflight"));
+            cli.Add("takeoff", "Release the ship after checking readiness", arg => CommandStage("takeoff"));
+            cli.Add("flight", "Select flight settings", arg => CommandStage("flight"));
+            cli.Add("approach", "Prepare the ship and start the landing countdown", arg => CommandStage("approach"));
+            cli.Add("landing", "Start Landing immediately, skipping the Approach delay", arg => CommandStage("landing"));
+            cli.Add("docked", "Stand down only while connected", arg => CommandStage("docked"));
+            cli.Add("pause", "Pause automatic transitions (does not stop another PB)", arg => SetPaused(true));
+            cli.Add("resume", "Resume automatic transitions", arg => SetPaused(false));
+            cli.Add("reload", "Reload configuration and discover blocks without replaying actions", arg => notice = "Configuration and blocks reloaded.");
+            cli.Add("retry", "Reload and retry the current stage, including its hooks", arg => Retry());
+            cli.Add("status", "Print current stage, readiness and errors", arg => Render());
+            cli.SetDefault("status");
             Reload();
             Restore();
             CaptureConnectionState();
@@ -107,7 +107,7 @@ namespace IngameScript
             bool command = (updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0;
             if (scanSeconds >= 5 || command || ConfigurationChanged()) Reload();
             ObserveConnections();
-            if (command) cli.run(argument);
+            if (command) cli.Run(argument);
             RefreshReadiness();
             Advance();
             UpdateLights();
@@ -143,7 +143,7 @@ namespace IngameScript
                     return;
                 }
                 RefreshReadiness();
-                if (!cli.get_switch("force") && blockers.Count > 0)
+                if (!cli.GetSwitch("force") && blockers.Count > 0)
                 {
                     notice = "Takeoff blocked. Correct readiness or use stage takeoff -force.";
                     return;

@@ -47,13 +47,13 @@ namespace IngameScript
         public Program()
         {
             cli = new CLI(this, "LaunchControl", ScriptVersion);
-            cli.add("launch", "Check systems, power up, release the dock port (--force skips checks)", DoLaunch);
-            cli.add("dock", "Shut down into docked systems (--force even if not connected)", DoDock);
-            cli.add("restore", "Re-apply the systems for the current state", DoRestore);
-            cli.add("manual", "Stop managing systems until 'auto'", DoManual);
-            cli.add("auto", "Resume managing systems", DoAuto);
-            cli.add("status", "Show the current state", DoStatus);
-            cli.set_default("launch");
+            cli.Add("launch", "Check systems, power up, release the dock port (--force skips checks)", DoLaunch);
+            cli.Add("dock", "Shut down into docked systems (--force even if not connected)", DoDock);
+            cli.Add("restore", "Re-apply the systems for the current state", DoRestore);
+            cli.Add("manual", "Stop managing systems until 'auto'", DoManual);
+            cli.Add("auto", "Resume managing systems", DoAuto);
+            cli.Add("status", "Show the current state", DoStatus);
+            cli.SetDefault("launch");
 
             LoadConfiguration();
             ScanBlocks();
@@ -75,7 +75,7 @@ namespace IngameScript
                 ScanBlocks();
             }
 
-            if (command) cli.run(argument);
+            if (command) cli.Run(argument);
             Tick(dt);
             Render(dt);
         }
@@ -195,7 +195,7 @@ namespace IngameScript
 
         void DoLaunch(string argument)
         {
-            bool force = cli.get_switch("force");
+            bool force = cli.GetSwitch("force");
             if (phase == Phase.Manual) { Note("Manual mode. Run 'auto' first."); return; }
             if (phase == Phase.Launching || phase == Phase.Releasing) { Note("Launch already in progress."); return; }
             if (phase == Phase.Docking) { Note("Docking in progress."); return; }
@@ -226,7 +226,7 @@ namespace IngameScript
 
         void DoDock(string argument)
         {
-            bool force = cli.get_switch("force");
+            bool force = cli.GetSwitch("force");
             if (phase == Phase.Manual) { Note("Manual mode. Run 'auto' first."); return; }
             blocked = false;
             blockers.Clear();
