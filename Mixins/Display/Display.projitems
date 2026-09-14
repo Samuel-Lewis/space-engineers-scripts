@@ -9,8 +9,6 @@
     <Import_RootNamespace>Display</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Display.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Status.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Log.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SurfaceDashboard.cs" />
   </ItemGroup>
 </Project>

@@ -35,20 +35,23 @@ Commands
 Configuration
 -------------
 
-All script settings and naming overrides use the `[tagger]` section. Missing settings are added automatically to the programmable block's Custom Data:
+All script settings and naming overrides use the `[tagger]` section. Missing settings are added automatically without comments:
 
     [tagger]
     include_connected_grids=false
     run_every_minutes=0
+    name_override=
 
 `include_connected_grids` also processes grids joined by connectors. It is disabled by default. Mechanical subgrids attached by hinges, rotors, or pistons are always processed.
 
-Set `run_every_minutes` above zero to run automatically at that interval. Keep it at `0` to disable automatic runs. Run the programmable block once after changing configuration so the schedule is reloaded.
+Set `run_every_minutes` above zero to run automatically at that interval. Keep it at `0` to disable automatic runs. Edits and deleted settings are detected on the next update, including while automatic runs are disabled. A changed interval restarts its countdown.
+
+Invalid values use defaults and report a warning. Malformed INI is preserved while defaults are used; repairing it resumes saving. Use one key=value per line.
 
 Block name overrides
 --------------------
 
-Add a naming override to an individual block's Custom Data:
+Naming creates a blank name_override on each block. Edit it in that block's Custom Data:
 
     [tagger]
     name_override=Airlock

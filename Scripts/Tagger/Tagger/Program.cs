@@ -157,8 +157,8 @@ namespace IngameScript
         }
 
         private CLI cli;
-        private IniBool configIncludeConnectedGrids;
-        private IniDouble configRunEveryMinutes;
+        private IniDocument configuration;
+        private readonly List<string> configWarnings = new List<string>();
         private bool includeConnectedGrids;
         private double runEveryMinutes;
         private double elapsedSeconds;
@@ -174,47 +174,42 @@ namespace IngameScript
             cli.add("config", "Show the active configuration", DoConfig);
             cli.set_default("run");
 
-            configIncludeConnectedGrids = new IniBool(
-                Me,
-                ConfigSection,
-                "include_connected_grids",
-                false,
-                "Process grids joined through connectors.");
-            configRunEveryMinutes = new IniDouble(
-                Me,
-                ConfigSection,
-                "run_every_minutes",
-                0,
-                "Automatic interval in minutes. Zero disables automatic runs.");
-
             LoadConfiguration();
         }
 
         public void Main(string argument, UpdateType updateSource)
         {
+            bool command = (updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0;
+            if (command || configuration.Changed) LoadConfiguration();
             if ((updateSource & UpdateType.Update100) != 0)
             {
                 elapsedSeconds += Runtime.TimeSinceLastRun.TotalSeconds;
                 if (runEveryMinutes > 0 && elapsedSeconds >= runEveryMinutes * 60)
                 {
                     elapsedSeconds = 0;
-                    LoadConfiguration();
                     DoRun();
                 }
             }
 
-            if ((updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0)
+            if (command)
             {
-                LoadConfiguration();
                 cli.run(argument);
             }
         }
 
         private void LoadConfiguration()
         {
-            includeConnectedGrids = configIncludeConnectedGrids.Get();
-            runEveryMinutes = Math.Max(0, configRunEveryMinutes.Get());
-            Runtime.UpdateFrequency = runEveryMinutes > 0 ? UpdateFrequency.Update100 : UpdateFrequency.None;
+            configWarnings.Clear();
+            configuration = new IniDocument(Me, warning => configWarnings.Add(warning));
+            includeConnectedGrids = configuration.Bool(ConfigSection, "include_connected_grids", false);
+            double interval = configuration.Double(ConfigSection, "run_every_minutes", 0, 0);
+            if (interval != runEveryMinutes) elapsedSeconds = 0;
+            runEveryMinutes = interval;
+            configuration.String(ConfigSection, "name_override");
+            configuration.CheckKeys(ConfigSection);
+            configuration.Save();
+            Runtime.UpdateFrequency = UpdateFrequency.Update100;
+            foreach (string warning in configWarnings) Echo(warning);
         }
 
         public void DoConfig(string argument = null)
@@ -222,6 +217,7 @@ namespace IngameScript
             Echo("[tagger]");
             Echo("include_connected_grids=" + includeConnectedGrids.ToString().ToLower());
             Echo("run_every_minutes=" + runEveryMinutes);
+            foreach (string warning in configWarnings) Echo(warning);
         }
 
         public void DoRun(string argument = null)
@@ -683,13 +679,9 @@ namespace IngameScript
         private string GetBlockName(IMyTerminalBlock block)
         {
             var standardName = GetStandardBlockName(block.DefinitionDisplayNameText);
-            var overrideName = "";
-            var ini = new MyIni();
-            MyIniParseResult result;
-            if (ini.TryParse(block.CustomData, out result))
-            {
-                overrideName = ini.Get(ConfigSection, "name_override").ToString().Trim();
-            }
+            var ini = new IniDocument(block, warning => Echo(warning));
+            var overrideName = ini.String(ConfigSection, "name_override").Trim();
+            ini.Save();
 
             var suffix = GetBlockNameSuffix(block, standardName, overrideName);
             var name = string.IsNullOrWhiteSpace(overrideName) ? standardName : overrideName;

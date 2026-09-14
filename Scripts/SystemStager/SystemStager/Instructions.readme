@@ -1,41 +1,100 @@
-﻿R e a d m e
-
+R e a d m e
 -----------
-There are two main functions:
-* Stages - The sequential steps a ship goes through from launching back to docking
-* Systems - The various systems (or modes) that can be toggled on or off
 
-Use `help` command in the PB to get a list of commands and their usage
+Docked -> Preflight -> Takeoff -> Flight -> Approach -> Landing -> Docked
 
+QUICK START
+-----------
 
-CustomData on Programmable Block
-```ini
-[stager.config]
-; How long to wait after booting before running the launch stage
-boot_time_seconds=1
-; How long to wait after docking before running the dock stage
-dock_time_seconds=1
+Load the script. It creates a complete, uncommented [stager] section in this
+PB's Custom Data. The defaults work immediately when the landing PB is named
+Spugs Auto Landing and its destination argument is default_home. Run preflight
+to launch and approach to land.
 
-; If blank, any connector on the grid will be used
-docking_connector=""
+DISPLAYS
+-----------
 
-; If using Spug's Auto Docking, specify the Programmable Block with the script
-landing_programmable_block="Miner.PB Dock"
+Rename an LCD to include [stager]:
+Bridge LCD [stager]
 
-landing_pb_default_arg="default_home"
-lcd_tag="LCDStager"
-custom_systems="welder,boarding_ramp"
-```
+Rename a cockpit to include [stager]. Its largest screen is used automatically:
+Main Cockpit [stager]
 
-CustomData on Configured Blocks
-```ini
-[stager.stages]
-boot=true
-launch=false
+To choose another screen, put this in that cockpit's Custom Data, not the PB:
+[stager]
+display_surface=1
+
+Screen numbers start at 0; display_surface=-1 automatically selects the largest.
+Tag more LCDs or cockpits for more dashboards.
+The dashboard shows stage, countdown, readiness and errors. Add status to a
+light's name to give it the same colour as the dashboard square.
+
+STAGES
+-----------
+
+Docked: recharge batteries; stockpile gas; disable reactors, hydrogen engines,
+thrusters, gyros, dampeners, lights, ore detector, tools and weapons.
+Preflight: enable flight power, thrust, gyros, dampeners and lights; stop gas
+stockpiling; disable tools/weapons; check readiness.
+Takeoff: disconnect ship connectors and unlock landing gear.
+Flight: keep flight systems active. Unlisted equipment remains unchanged.
+Approach: enable gear autolock, disable tools/weapons and run stow hooks.
+Landing: call Spug once; a connector entering Connected immediately docks.
+
+PB CONFIGURATION
+-----------
+
+All settings are added automatically without comments. Edit values in place.
+auto_takeoff and auto_landing control timed transitions. Their delays default
+to one second. readiness_threshold_percent applies to enabled battery and tank
+checks. check_flight_systems also requires usable thrust and gyros.
+
+Leave docking_connector blank to use all ship connectors, or enter one exact
+name. landing_programmable_block and landing_argument configure Spug. Tags
+select the status light and displays. Stage colours use R,G,B values.
+
+Edits and deleted settings are detected on the next script update. Missing keys
+are restored. Invalid values use their defaults and show a warning. Malformed
+INI is left intact while the script uses defaults; fixing it resumes saving.
+Use one key=value per line under [stager]. Other sections are preserved.
+Timing/readiness/display changes apply live. Stage actions apply on entry or
+retry, so editing Custom Data does not repeat hooks or disconnect the ship.
+
+BLOCK OVERRIDES
+-----------
+
+Each ship block receives its own [stager] settings and blank stage overrides.
+Blank actions inherit category/built-in defaults; ignore leaves it unchanged:
+[stager]
+docked=off
+preflight=on
 flight=ignore
 
-[stager.systems]
-powersaver=true
-production=false
-combat=ignore
-```
+Actions: on/off/ignore; battery auto/recharge/discharge; tank normal/stockpile;
+controller dampeners_on/dampeners_off; connector connect/disconnect; gear
+lock/unlock/autolock; door open/close; timer trigger/start/stop; PB run:<argument>.
+
+managed=false excludes stage actions. readiness=false excludes its readiness
+check. docking=false excludes a connector from dock detection and default
+connector actions; explicit actions on that connector still run.
+
+For solar mechanisms, put flight=trigger on a deploy timer and approach=trigger
+on a separate stow timer. Hooks run once per stage and completed hooks are not
+repeated by retry. Increase approach_delay_seconds to allow stowing to finish.
+
+The blank <stage>.<category> entries in PB Custom Data inherit built-in actions.
+Set one to override a category, such as docked.reactor=on.
+Categories: battery, reactor, engine, thruster, gyro, controller, tank,
+connector, gear, light, ore_detector, tool, weapon, door, timer, program, other.
+Individual block actions take precedence.
+
+COMMANDS
+-----------
+
+preflight / approach    Normal launch and landing controls.
+stage <name>            Select any stage directly.
+landing                 Start Landing now, skipping the Approach delay.
+stage takeoff -force    Bypass readiness only.
+pause / resume          Freeze/resume automatic transitions.
+reload / retry          Reload config / retry failed actions.
+status / help           Show current status or display this help message.
