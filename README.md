@@ -6,7 +6,7 @@ A collection of programmable block scripts for [Space Engineers](https://www.spa
 
 - [Grid Renamer](Scripts/GridRenamer) prefixes block names with their grid name and standardises common names. [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3272722169)
 - [Tagger](Scripts/Tagger) assigns reusable INI tags to blocks according to block type.
-- [System Stager](Scripts/SystemStager) manages configurable flight stages and ship systems.
+- [LaunchControl](Scripts/LaunchControl) switches ship systems between docked and flight, with launch checks.
 - [Mixins](Mixins) contains shared command-line, display, event, and INI helpers used by the scripts.
 
 ## Building

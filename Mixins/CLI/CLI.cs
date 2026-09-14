@@ -77,7 +77,8 @@ public class CLI
 
             if (command == null)
             {
-                run(default_command);
+                // Switches only, e.g. "--force": run the default command and keep the switches.
+                commands[default_command](null);
                 return;
             }
             else if (commands.TryGetValue(command, out commandAction))

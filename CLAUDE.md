@@ -25,7 +25,7 @@ Build each script project directly:
 ```powershell
 dotnet build Scripts/GridRenamer/GridRenamer/GridRenamer.csproj -c Release
 dotnet build Scripts/Tagger/Tagger/Tagger.csproj -c Release
-dotnet build Scripts/SystemStager/SystemStager/SystemStager.csproj -c Release
+dotnet build Scripts/LaunchControl/LaunchControl/LaunchControl.csproj -c Release
 ```
 
 MDK2 requires the .NET 9 SDK and a local Space Engineers installation so it can resolve the game assemblies.
