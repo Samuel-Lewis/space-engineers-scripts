@@ -34,6 +34,7 @@ namespace IngameScript
 
             const string Font = "Debug";
             const double PageSeconds = 5;
+            const double WarningBand = 0.3;
             readonly List<IMyTextSurface> surfaces = new List<IMyTextSurface>();
             readonly StringBuilder measurement = new StringBuilder();
             readonly List<string> wrapped = new List<string>();
@@ -43,6 +44,7 @@ namespace IngameScript
             readonly Color muted = new Color(120, 138, 160);
             readonly Color track = new Color(30, 42, 56);
             readonly Color goodColour = new Color(90, 190, 230);
+            readonly Color warningColour = new Color(255, 160, 40);
             readonly Color errorColour = new Color(255, 90, 70);
 
             public int SurfaceCount { get { return surfaces.Count; } }
@@ -83,61 +85,69 @@ namespace IngameScript
                 if (size.X < 1 || size.Y < 1) return;
                 Vector2 origin = (surface.TextureSize - size) / 2f;
                 float unit = Math.Min(size.X / 512f, size.Y / 256f);
-                float padding = 16f * unit;
+                float padding = 18f * unit;
                 float left = origin.X + padding;
                 float right = origin.X + size.X - padding;
                 float width = right - left;
-                float scale = .7f * unit;
-                float lineHeight = Math.Max(Measure(surface, "Ag", scale).Y, 22f * unit);
+                float scale = .9f * unit;
+                float lineHeight = Math.Max(Measure(surface, "Ag", scale).Y, 26f * unit);
                 float y = origin.Y + padding;
                 int issueCount = issues == null ? 0 : issues.Count;
+                int gaugeCount = gauges == null ? 0 : gauges.Count;
 
                 using (MySpriteDrawFrame frame = surface.DrawFrame())
                 {
                     Rect(frame, origin + size / 2f, size, background);
 
                     // Header
-                    Text(frame, Fit(surface, (title ?? "").ToUpperInvariant(), width, scale * .8f),
-                        new Vector2(left, y), scale * .8f, muted, TextAlignment.LEFT);
-                    y += lineHeight * .8f + 8f * unit;
+                    Text(frame, Fit(surface, (title ?? "").ToUpperInvariant(), width, scale * .75f),
+                        new Vector2(left, y), scale * .75f, muted, TextAlignment.LEFT);
+                    y += lineHeight * .75f + 10f * unit;
 
-                    // Lamp and state
-                    float lamp = 40f * unit;
-                    Vector2 lampCentre = new Vector2(left + lamp / 2, y + lamp / 2);
+                    // Lamp and state. The glow is the widest part, so it sets the column
+                    // and the row so nothing spills past the padding.
+                    float lamp = 44f * unit;
+                    float glow = lamp * 1.7f;
+                    Vector2 lampCentre = new Vector2(left + glow / 2, y + glow / 2);
                     Color lampDim = new Color(lampColour.R / 5, lampColour.G / 5, lampColour.B / 5);
                     if (lit)
                     {
-                        Sprite(frame, "Circle", lampCentre, new Vector2(lamp * 1.9f, lamp * 1.9f),
+                        Sprite(frame, "Circle", lampCentre, new Vector2(glow, glow),
                             new Color(lampColour.R, lampColour.G, lampColour.B, 28));
-                        Sprite(frame, "Circle", lampCentre, new Vector2(lamp * 1.35f, lamp * 1.35f),
+                        Sprite(frame, "Circle", lampCentre, new Vector2(lamp * 1.3f, lamp * 1.3f),
                             new Color(lampColour.R, lampColour.G, lampColour.B, 70));
                     }
                     Sprite(frame, "Circle", lampCentre, new Vector2(lamp, lamp), lit ? lampColour : lampDim);
                     Sprite(frame, "CircleHollow", lampCentre, new Vector2(lamp, lamp),
                         lit ? foreground : new Color(60, 70, 84));
 
-                    float stateScale = scale * 1.7f;
-                    float stateX = left + lamp + 16f * unit;
+                    float stateX = left + glow + 12f * unit;
+                    float stateScale = scale * 2.4f;
+                    while (stateScale > scale && Measure(surface, state, stateScale).X > right - stateX)
+                        stateScale -= scale * .1f;
                     Vector2 stateSize = Measure(surface, state, stateScale);
                     Text(frame, Fit(surface, state, right - stateX, stateScale),
                         new Vector2(stateX, lampCentre.Y - stateSize.Y / 2), stateScale, foreground, TextAlignment.LEFT);
-                    y += lamp + 8f * unit;
+                    y += glow + 6f * unit;
 
                     Text(frame, Fit(surface, subtitle, width, scale), new Vector2(left, y), scale, muted, TextAlignment.LEFT);
-                    y += lineHeight + 10f * unit;
+                    y += lineHeight + 12f * unit;
 
-                    // Gauges
+                    // Gauges share one grid: icon column, label column, bar, value column.
                     float bottom = origin.Y + size.Y - padding;
-                    float rowHeight = lineHeight + 6f * unit;
-                    int gaugeCount = gauges == null ? 0 : gauges.Count;
+                    float rowHeight = lineHeight + 8f * unit;
+                    float valueColumn = 0;
+                    for (int i = 0; i < gaugeCount; i++)
+                        valueColumn = Math.Max(valueColumn, Measure(surface, gauges[i].Text ?? "", scale).X);
+                    valueColumn += 12f * unit;
                     int reserve = issueCount > 0 ? 3 : 1;
                     int gaugeRows = Math.Min(gaugeCount, Math.Max(0, (int)((bottom - y) / rowHeight) - reserve));
                     for (int i = 0; i < gaugeRows; i++)
                     {
-                        DrawGauge(frame, surface, gauges[i], left, right, y, rowHeight, unit, scale);
+                        DrawGauge(frame, surface, gauges[i], left, right, y, rowHeight, valueColumn, unit, scale);
                         y += rowHeight;
                     }
-                    y += 6f * unit;
+                    y += 8f * unit;
 
                     // Issues
                     int rows = (int)((bottom - y) / lineHeight);
@@ -174,32 +184,30 @@ namespace IngameScript
             }
 
             void DrawGauge(MySpriteDrawFrame frame, IMyTextSurface surface, Gauge gauge,
-                float left, float right, float y, float rowHeight, float unit, float scale)
+                float left, float right, float y, float rowHeight, float valueColumn, float unit, float scale)
             {
                 float centreY = y + rowHeight / 2;
-                float icon = 20f * unit;
+                float textY = centreY - Measure(surface, "Ag", scale).Y / 2;
+                float icon = 24f * unit;
                 float x = left;
                 if (!string.IsNullOrEmpty(gauge.Icon))
-                {
                     Sprite(frame, gauge.Icon, new Vector2(x + icon / 2, centreY), new Vector2(icon, icon), foreground);
-                    x += icon + 8f * unit;
-                }
+                x += icon + 10f * unit;
 
-                float labelWidth = 110f * unit;
-                Text(frame, Fit(surface, gauge.Label, labelWidth, scale),
-                    new Vector2(x, centreY - Measure(surface, "Ag", scale).Y / 2), scale, foreground, TextAlignment.LEFT);
+                float labelWidth = 130f * unit;
+                Text(frame, Fit(surface, gauge.Label, labelWidth - 8f * unit, scale),
+                    new Vector2(x, textY), scale, foreground, TextAlignment.LEFT);
                 x += labelWidth;
 
-                float valueWidth = Measure(surface, gauge.Text ?? "", scale).X + 8f * unit;
-                Text(frame, gauge.Text ?? "", new Vector2(right, centreY - Measure(surface, "Ag", scale).Y / 2),
-                    scale, foreground, TextAlignment.RIGHT);
+                Color fill = GaugeColour(gauge);
+                Text(frame, gauge.Text ?? "", new Vector2(right, textY), scale,
+                    gauge.Fraction < 0 ? foreground : fill, TextAlignment.RIGHT);
 
                 if (gauge.Fraction < 0) return;
-                float barWidth = right - valueWidth - x;
+                float barWidth = right - valueColumn - x;
                 if (barWidth < 20f * unit) return;
-                float barHeight = 10f * unit;
+                float barHeight = 12f * unit;
                 double fraction = Math.Min(1, Math.Max(0, gauge.Fraction));
-                Color fill = gauge.Threshold >= 0 && gauge.Fraction < gauge.Threshold ? errorColour : goodColour;
                 Rect(frame, new Vector2(x + barWidth / 2, centreY), new Vector2(barWidth, barHeight), track);
                 float fillWidth = (float)(barWidth * fraction);
                 if (fillWidth > 0)
@@ -207,6 +215,16 @@ namespace IngameScript
                 if (gauge.Threshold > 0 && gauge.Threshold < 1)
                     Rect(frame, new Vector2(x + (float)(barWidth * gauge.Threshold), centreY),
                         new Vector2(2f * unit, barHeight + 6f * unit), foreground);
+            }
+
+            // Red below the threshold. Orange in the first WarningBand of the room above it,
+            // so a 45% threshold turns orange below 45 + 0.3 * 55 = 61.5%.
+            Color GaugeColour(Gauge gauge)
+            {
+                if (gauge.Threshold < 0) return goodColour;
+                if (gauge.Fraction < gauge.Threshold) return errorColour;
+                if (gauge.Fraction < gauge.Threshold + WarningBand * (1 - gauge.Threshold)) return warningColour;
+                return goodColour;
             }
 
             void Rect(MySpriteDrawFrame frame, Vector2 centre, Vector2 size, Color colour)

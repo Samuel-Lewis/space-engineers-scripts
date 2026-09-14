@@ -51,16 +51,16 @@ namespace IngameScript
             if (thrusters.Count > 0)
             {
                 int working = Working(thrusters);
-                gauges.Add(new SurfaceDashboard.Gauge("Thrusters", "", (double)working / thrusters.Count,
+                gauges.Add(new SurfaceDashboard.Gauge("Thrusters", "MyObjectBuilder_Component/Thrust", (double)working / thrusters.Count,
                     1.0 / thrusters.Count, working + "/" + thrusters.Count));
             }
             if (gyros.Count > 0)
             {
                 int working = Working(gyros);
-                gauges.Add(new SurfaceDashboard.Gauge("Gyroscopes", "", (double)working / gyros.Count,
+                gauges.Add(new SurfaceDashboard.Gauge("Gyroscopes", "MyObjectBuilder_Component/Motor", (double)working / gyros.Count,
                     1.0 / gyros.Count, working + "/" + gyros.Count));
             }
-            gauges.Add(new SurfaceDashboard.Gauge("Managed blocks", "", -1, -1, managed.Count.ToString()));
+            gauges.Add(new SurfaceDashboard.Gauge("Managed blocks", "MyObjectBuilder_Component/Computer", -1, -1, managed.Count.ToString()));
             issues.AddRange(blockers);
             if (portProblem != null) issues.Add(portProblem);
             if (hostPowerWarning != null && phase == Phase.Docked) issues.Add(hostPowerWarning);
