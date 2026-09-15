@@ -344,6 +344,7 @@ namespace IngameScript
                 if (!IsSpatialTag(tag)) blockTags.Add(tag);
             }
 
+            blockTags.Add("all");
             foreach (var tag in GetTypeTags(block)) blockTags.Add(tag);
 
             if (spatial != null)
