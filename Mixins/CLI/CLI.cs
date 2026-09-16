@@ -23,14 +23,11 @@ namespace IngameScript
 
         private string defaultCommand = "help";
 
-        public string Version { get; private set; }
-
-        public CLI(Program program, string name, string version)
+        public CLI(Program program, string name)
         {
             echo = program.Echo;
             this.name = name;
-            Version = version;
-            Add("help", "Display help info", Help);
+            Add("help", "List commands", Help);
         }
 
         public void Add(string command, string description, Action<string> action)
@@ -51,10 +48,7 @@ namespace IngameScript
 
         public void Help(string argument = null)
         {
-            echo(name);
-            echo("Version: " + Version);
-            echo("---");
-            echo("Available commands:");
+            echo(name + " | commands");
             foreach (var command in commands)
                 echo("  " + command.Key + ": " + command.Value.Description);
         }
@@ -69,7 +63,7 @@ namespace IngameScript
 
             if (!commandLine.TryParse(input))
             {
-                echo("Could not parse '" + input + "'. Use 'help' for a list of commands.");
+                echo("! Could not parse '" + input + "'. Use help for a list of commands.");
                 return;
             }
 
@@ -84,7 +78,7 @@ namespace IngameScript
             Command command;
             if (!commands.TryGetValue(name, out command))
             {
-                echo("Unknown command '" + name + "'.\nUse 'help' for a list of commands.");
+                echo("! Unknown command '" + name + "'. Use help for a list of commands.");
                 return;
             }
 

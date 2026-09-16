@@ -4,130 +4,113 @@ R e a d m e
 Switches your ship's systems between two states:
 
 - Docked: batteries recharge, hydrogen tanks stockpile, and thrusters,
-  gyroscopes, reactors, hydrogen engines, O2/H2 generators, antennas,
-  beacons, ore detectors, and lights turn off.
+  gyroscopes, reactors, hydrogen engines, O2/H2 generators, beacons, ore
+  detectors, and lights turn off.
 - Flight: the same systems turn on, batteries go to Auto, and tanks stop
   stockpiling.
+
+Antennas are never switched, so scripts that talk over antenna keep working
+while docked. Add a [launchcontrol] override to an antenna to change that.
 
 Docking is automatic. Connect your dock port and the ship shuts down.
 Launching is the only thing you press.
 
-Setup
------
+SETUP
+-----------
 
-1. Load this script into a Programmable Block.
-2. Put the Programmable Block on your toolbar with the `Run` action and
-   no argument.
+1. Load this script into a Programmable Block. It creates a [launchcontrol]
+   section in the PB's Custom Data with defaults that work as-is.
+2. Put the PB on your toolbar with the Run action and no argument.
 
-If the ship has one connector, it is the dock port. If it has more than
-one, mark the dock port by adding `[launchcontrol]` to its name or this
-to its Custom Data:
-
-    [launchcontrol]
-    dock_port=true
-
+If the ship has one connector, it is the dock port. With several, mark the
+dock port by adding [launchcontrol] to its name or this to its Custom Data:
+[launchcontrol]
+dock_port=true
 Nothing happens until a dock port is known.
 
-Launching
----------
+LAUNCHING
+-----------
 
-Run the block with no argument, or with `launch`. The script checks
-hydrogen, battery charge, and that thrusters and gyroscopes are working.
-If anything fails, the launch is refused and the reason is shown. Fix it
-or run `launch --force` to skip the checks.
+Run the PB with no argument, or with launch. The script checks hydrogen,
+battery charge, and that thrusters and gyroscopes are working. If anything
+fails, the launch is refused and the reason is shown. Fix it or run
+launch --force to skip the checks.
 
-When the checks pass, flight systems come on, the dock port releases after
-a short delay, and you are in Flight. If the port has not released within
-two seconds the launch is reported as failed; flight systems stay on.
-Running `dock` during a launch cancels it.
+When the checks pass, flight systems come on, the dock port releases after a
+short delay, and you are in Flight. If the port has not released within two
+seconds the launch is reported as failed; flight systems stay on. Running dock
+during a launch cancels it.
 
-Commands
---------
+DISPLAYS AND LIGHTS
+-----------
 
-- `launch`: check systems, power up, release the dock port. Default.
-- `launch --force`: skip the checks. Also restores flight systems if the
-  ship is already free.
-- `dock`: shut down into Docked. Runs automatically on connection; use
-  it if that did not happen.
-- `dock --force`: shut down even if the dock port is not connected.
-- `restore`: re-apply the systems for the current state. Use this after
-  turning things on or off by hand.
-- `manual`: stop managing systems. Nothing changes until `auto`.
-- `auto`: resume managing systems.
-- `status`: refresh the display.
-- `help`: show command help.
+Add [launchcontrol] to the name of an LCD or cockpit. It gets one display_<n>
+key per screen in its Custom Data; display_0 is set to status, the rest are
+blank. Put status on whichever screens should show the dashboard:
+[launchcontrol]
+display_0=status
+display_1=
+The PB's own screens have the same keys in the PB section, blank by default.
 
-Status lights
--------------
+The dashboard shows a status lamp, hydrogen and battery gauges with the launch
+minimum marked, thruster and gyroscope counts, and any issues.
 
-Add `[launchcontrol]` to any light's name, or set `status_light=true` in
-its Custom Data. The light is never turned off and shows:
+Add [launchcontrol] to a light's name, or set status_light=true in its Custom
+Data. The light is never turned off and shows green Docked, blue Flight,
+yellow blinking while launching or docking, red blinking when a launch is
+blocked or failed, white in Manual.
 
-- Green: Docked
-- Blue: Flight
-- Yellow, blinking: launching or docking
-- Red, blinking: launch blocked or failed
-- White: Manual
+PB CONFIGURATION
+-----------
 
-Displays
---------
+launch_delay_seconds=0.5   Between powering up and releasing.
+dock_delay_seconds=0.5     Between connecting and shutting down.
+min_hydrogen_percent=90    Launch needs at least this much.
+min_battery_percent=90     Launch needs at least this much.
+auto_dock=true             false stops the automatic shutdown on connection.
+auto_recover=true          false stops flight systems coming back on if the
+                           ship disconnects without launching.
+display_0= display_1=      Roles for the PB's own screens.
 
-Displays show a status lamp that matches the status lights, hydrogen and
-battery gauges with the launch minimum marked, thruster and gyroscope
-counts, and any issues.
+Missing keys are restored, invalid values fall back with a warning, and
+malformed INI is left untouched while defaults are used. Edits are picked up
+within about ten seconds or on any command.
 
-Add `[launchcontrol]` to an LCD's name to use it. For a cockpit or other
-block with several screens, set the screen number in its Custom Data:
+BLOCK OVERRIDES
+-----------
 
-    [launchcontrol]
-    use_display=0
+A block opts in by carrying the name tag or a [launchcontrol] section in its
+Custom Data. Its section is then completed with blank defaults:
+[launchcontrol]
+ignore=false
+docked=
+flight=
 
-Set `use_display=0` on the Programmable Block to use its own screen.
+ignore=true leaves the block alone entirely. docked and flight set what the
+block does in each state: on, off, or ignore. Batteries also accept recharge,
+auto, and discharge. Hydrogen and oxygen tanks also accept stockpile and auto.
+Blank inherits the built-in rule. Overrides work on any block, including ones
+the script does not manage by default.
 
-Configuration
--------------
+Cockpits, remote controls, timers, event controllers, button panels, the PB,
+and connectors are never switched.
 
-Settings live in the Programmable Block's Custom Data. Missing settings
-are added with their defaults:
+COMMANDS
+-----------
 
-    [launchcontrol]
-    launch_delay=0.5
-    dock_delay=0.5
-    min_hydrogen=90
-    min_battery=90
-    auto_dock=true
-    auto_recover=true
-    use_display=-1
+launch           Check systems, power up, release the dock port. Default.
+launch --force   Skip the checks. Also restores flight systems if the ship is
+                 already free.
+dock             Shut down into Docked. Runs automatically on connection.
+dock --force     Shut down even if the dock port is not connected.
+restore          Re-apply the systems for the current state.
+manual / auto    Stop / resume managing systems.
+status           Print the current state.
+config           Print the active settings.
+help             List commands.
 
-`launch_delay` and `dock_delay` are seconds between powering up and
-releasing, and between connecting and shutting down. `min_hydrogen` and
-`min_battery` are the percentages a launch needs. `auto_dock=false`
-stops the automatic shutdown on connection. `auto_recover=false` stops
-flight systems coming back on if the ship disconnects without launching.
-
-Per-block overrides
--------------------
-
-Add a `[launchcontrol]` section to any block's Custom Data:
-
-    [launchcontrol]
-    ignore=true
-
-    [launchcontrol]
-    docked=on
-    flight=ignore
-
-`ignore=true` leaves the block alone entirely. `docked` and `flight`
-set what the block does in each state: `on`, `off`, or `ignore`.
-Batteries also accept `recharge`, `auto`, and `discharge`. Hydrogen and
-oxygen tanks also accept `stockpile` and `auto`. Overrides work on any
-block, including ones the script does not manage by default.
-
-Cockpits, remote controls, timers, event controllers, button panels, the
-Programmable Block, and connectors are never switched.
-
-Notes
------
+NOTES
+-----------
 
 - Only blocks on this grid and its rotor, hinge, and piston subgrids are
   managed. Blocks on the grid you dock to are never touched.

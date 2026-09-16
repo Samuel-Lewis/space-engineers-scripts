@@ -28,10 +28,18 @@ namespace IngameScript
         readonly List<IMyTerminalBlock> scanBuffer = new List<IMyTerminalBlock>();
         readonly List<IMyShipConnector> allConnectors = new List<IMyShipConnector>();
         readonly List<IMyPowerProducer> hostPowerBuffer = new List<IMyPowerProducer>();
-        readonly MyIni blockIni = new MyIni();
+        readonly List<IMyTextSurface> pbSurfaces = new List<IMyTextSurface>();
+        // Blocks that opted in, so their Custom Data edits and renames trigger a rescan.
+        readonly List<IniDocument> blockConfigs = new List<IniDocument>();
+        readonly List<IMyTerminalBlock> blockConfigOwners = new List<IMyTerminalBlock>();
+        readonly List<string> blockConfigNames = new List<string>();
         string portProblem;
         string hostPowerWarning;
 
+        // A block opts in to per-block settings by carrying the name tag or a
+        // [launchcontrol] section. Its section is then completed with defaults, like
+        // the PB's. Untagged blocks without the section are read with defaults only
+        // and never written to.
         void ScanBlocks()
         {
             managed.Clear();
@@ -44,51 +52,54 @@ namespace IngameScript
             gyros.Clear();
             scanWarnings.Clear();
             allConnectors.Clear();
-            int invalidCustomData = 0;
+            blockConfigs.Clear();
+            blockConfigOwners.Clear();
+            blockConfigNames.Clear();
+            displaySurfaces.AddRange(pbSurfaces);
 
             scanBuffer.Clear();
             GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(scanBuffer, block => block.IsSameConstructAs(Me));
 
             foreach (IMyTerminalBlock block in scanBuffer)
             {
+                if (block.EntityId == Me.EntityId) continue;
                 bool tagged = block.CustomName.IndexOf(NameTag, StringComparison.OrdinalIgnoreCase) >= 0;
-                blockIni.Clear();
-                string customData = block.CustomData;
-                if (!string.IsNullOrWhiteSpace(customData) && !blockIni.TryParse(customData))
+                bool hasSection = (block.CustomData ?? "").IndexOf(NameTag, StringComparison.OrdinalIgnoreCase) >= 0;
+                IniDocument ini = null;
+                if (tagged || hasSection)
                 {
-                    if (customData.IndexOf(NameTag, StringComparison.OrdinalIgnoreCase) >= 0) invalidCustomData++;
-                    blockIni.Clear();
+                    ini = new IniDocument(block, warning => scanWarnings.Add(warning));
+                    blockConfigs.Add(ini);
+                    blockConfigOwners.Add(block);
+                    blockConfigNames.Add(block.CustomName);
                 }
 
                 IMyShipConnector connector = block as IMyShipConnector;
                 if (connector != null)
                 {
                     allConnectors.Add(connector);
-                    if (tagged || IniBool("dock_port")) ports.Add(connector);
+                    if (ini != null && ini.Bool(Section, "dock_port", tagged)) ports.Add(connector);
+                    Finish(ini);
                     continue;
                 }
 
                 IMyLightingBlock light = block as IMyLightingBlock;
-                if (light != null && (tagged || IniBool("status_light")))
+                if (light != null && ini != null && ini.Bool(Section, "status_light", tagged))
                 {
                     statusLights.Add(light);
+                    Finish(ini);
                     continue;
                 }
 
-                int surfaceIndex = IniInt("use_display", tagged ? 0 : -1);
-                if (surfaceIndex >= 0)
-                {
-                    IMyTextSurfaceProvider provider = block as IMyTextSurfaceProvider;
-                    IMyTextSurface surface = block as IMyTextSurface;
-                    if (provider != null && provider.SurfaceCount > 0)
-                        displaySurfaces.Add(provider.GetSurface(Math.Min(surfaceIndex, provider.SurfaceCount - 1)));
-                    else if (surface != null)
-                        displaySurfaces.Add(surface);
-                }
+                if (ini != null) ReadDisplays(block, ini, tagged);
 
-                if (IniBool("ignore")) continue;
+                bool ignore = ini != null && ini.Bool(Section, "ignore", false);
                 IMyFunctionalBlock functional = block as IMyFunctionalBlock;
-                if (functional == null || NeverManaged(block)) continue;
+                if (ignore || functional == null || NeverManaged(block))
+                {
+                    Finish(ini);
+                    continue;
+                }
 
                 if (block is IMyBatteryBlock) batteries.Add((IMyBatteryBlock)block);
                 else if (block is IMyGasTank && IsHydrogenTank(block)) hydrogenTanks.Add((IMyGasTank)block);
@@ -98,17 +109,15 @@ namespace IngameScript
                 SystemAction docked;
                 SystemAction flight;
                 bool hasRule = DefaultRule(functional, out docked, out flight);
-                string dockedValue = IniString("docked");
-                string flightValue = IniString("flight");
-                if (dockedValue != null) { docked = ParseAction(functional, "docked", dockedValue); hasRule = true; }
-                if (flightValue != null) { flight = ParseAction(functional, "flight", flightValue); hasRule = true; }
+                string dockedValue = ini == null ? "" : ini.String(Section, "docked", "").Trim();
+                string flightValue = ini == null ? "" : ini.String(Section, "flight", "").Trim();
+                if (dockedValue.Length > 0) { docked = ParseAction(functional, "docked", dockedValue); hasRule = true; }
+                if (flightValue.Length > 0) { flight = ParseAction(functional, "flight", flightValue); hasRule = true; }
+                Finish(ini);
                 if (!hasRule) continue;
 
                 managed.Add(new ManagedBlock { Block = functional, Docked = docked, Flight = flight });
             }
-
-            if (invalidCustomData > 0)
-                scanWarnings.Add(invalidCustomData + " block(s) have [launchcontrol] in unreadable Custom Data; ignored.");
 
             portProblem = null;
             if (ports.Count == 0)
@@ -122,24 +131,39 @@ namespace IngameScript
             lastLightKey = "";
         }
 
-        bool IniBool(string key)
+        static void Finish(IniDocument ini)
         {
-            bool value;
-            return blockIni.ContainsKey(Section, key) && blockIni.Get(Section, key).TryGetBoolean(out value) && value;
+            if (ini == null) return;
+            ini.CheckKeys(Section);
+            ini.Save();
         }
 
-        int IniInt(string key, int fallback)
+        bool BlockConfigurationChanged()
         {
-            int value;
-            if (blockIni.ContainsKey(Section, key) && blockIni.Get(Section, key).TryGetInt32(out value)) return value;
-            return fallback;
+            for (int i = 0; i < blockConfigs.Count; i++)
+                if (blockConfigOwners[i].Closed || blockConfigs[i].Changed || blockConfigOwners[i].CustomName != blockConfigNames[i])
+                    return true;
+            return false;
         }
 
-        string IniString(string key)
+        // One display_<n> key per surface; "status" shows the dashboard, blank leaves
+        // the surface alone. A tagged block shows it on display_0 by default.
+        void ReadDisplays(IMyTerminalBlock block, IniDocument ini, bool tagged)
         {
-            if (!blockIni.ContainsKey(Section, key)) return null;
-            string value = blockIni.Get(Section, key).ToString().Trim();
-            return value.Length == 0 ? null : value;
+            IMyTextPanel panel = block as IMyTextPanel;
+            IMyTextSurfaceProvider provider = block as IMyTextSurfaceProvider;
+            int count = panel != null ? 1 : provider != null ? provider.SurfaceCount : 0;
+            bool self = block.EntityId == Me.EntityId;
+            if (self) pbSurfaces.Clear();
+            for (int index = 0; index < count; index++)
+            {
+                string value = ini.String(Section, "display_" + index, tagged && index == 0 ? "status" : "",
+                    text => text.Trim().Length == 0 || string.Equals(text.Trim(), "status", StringComparison.OrdinalIgnoreCase),
+                    "status or blank").Trim();
+                if (value.Length == 0) continue;
+                IMyTextSurface surface = panel != null ? (IMyTextSurface)panel : provider.GetSurface(index);
+                (self ? pbSurfaces : displaySurfaces).Add(surface);
+            }
         }
 
         // The pilot, the script, and anything that sequences other blocks are never touched.
@@ -178,9 +202,10 @@ namespace IngameScript
                 flight = SystemAction.Auto;
                 return true;
             }
+            // Antennas are left alone so IGC scripts such as FleetTelemetry keep
+            // talking while docked.
             if (block is IMyThrust || block is IMyGyro || block is IMyReactor || block is IMyGasGenerator
-                || block is IMyRadioAntenna || block is IMyLaserAntenna || block is IMyBeacon
-                || block is IMyOreDetector || block is IMyLightingBlock || IsHydrogenEngine(block))
+                || block is IMyBeacon || block is IMyOreDetector || block is IMyLightingBlock || IsHydrogenEngine(block))
             {
                 docked = SystemAction.Off;
                 flight = SystemAction.On;

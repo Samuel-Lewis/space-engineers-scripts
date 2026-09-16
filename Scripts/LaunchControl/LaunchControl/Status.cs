@@ -67,8 +67,7 @@ namespace IngameScript
             issues.AddRange(configWarnings);
             issues.AddRange(scanWarnings);
 
-            Echo("LaunchControl " + ScriptVersion);
-            Echo("State: " + state);
+            Echo("LaunchControl | " + state);
             Echo("Port: " + PortSummary());
             if (hydrogen >= 0 || battery >= 0)
                 Echo((hydrogen >= 0 ? "H2 " + Math.Floor(hydrogen) + "%  " : "")

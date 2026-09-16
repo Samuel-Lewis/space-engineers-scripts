@@ -1,0 +1,39 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36212.18
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FleetTelemetry", "FleetTelemetry\FleetTelemetry.csproj", "{7D2C1E1A-4B6F-4F2E-9C3B-2A5D8E1F0C11}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CLI", "..\..\Mixins\CLI\CLI.shproj", "{3A79288E-E133-4C1D-AB4F-92F1326D44BB}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Display", "..\..\Mixins\Display\Display.shproj", "{143F4FFB-ABF6-43FA-9188-270DD6BD3F51}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "IniHandler", "..\..\Mixins\IniHandler\IniHandler.shproj", "{C4907BFB-A3AB-4083-B654-F66BFF5E5012}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7D2C1E1A-4B6F-4F2E-9C3B-2A5D8E1F0C11}.Debug|x64.ActiveCfg = Debug|x64
+		{7D2C1E1A-4B6F-4F2E-9C3B-2A5D8E1F0C11}.Debug|x64.Build.0 = Debug|x64
+		{7D2C1E1A-4B6F-4F2E-9C3B-2A5D8E1F0C11}.Release|x64.ActiveCfg = Release|x64
+		{7D2C1E1A-4B6F-4F2E-9C3B-2A5D8E1F0C11}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5E9B7A30-6C1D-4E8F-A2B4-9F0C3D7E6A21}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\..\Mixins\CLI\CLI.projitems*{7d2c1e1a-4b6f-4f2e-9c3b-2a5d8e1f0c11}*SharedItemsImports = 5
+		..\..\Mixins\Display\Display.projitems*{7d2c1e1a-4b6f-4f2e-9c3b-2a5d8e1f0c11}*SharedItemsImports = 5
+		..\..\Mixins\IniHandler\IniHandler.projitems*{7d2c1e1a-4b6f-4f2e-9c3b-2a5d8e1f0c11}*SharedItemsImports = 5
+		..\..\Mixins\CLI\CLI.projitems*{3a79288e-e133-4c1d-ab4f-92f1326d44bb}*SharedItemsImports = 13
+		..\..\Mixins\Display\Display.projitems*{143f4ffb-abf6-43fa-9188-270dd6bd3f51}*SharedItemsImports = 13
+		..\..\Mixins\IniHandler\IniHandler.projitems*{c4907bfb-a3ab-4083-b654-f66bff5e5012}*SharedItemsImports = 13
+	EndGlobalSection
+EndGlobal

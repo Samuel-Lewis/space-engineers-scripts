@@ -122,6 +122,7 @@ namespace IngameScript
         private string gridIdOverride = "";
         private double runEveryMinutes;
         private double elapsedSeconds;
+        private string scopeSummary = "";
 
         // Reused across every block so tagging and naming allocate one parser, not one per block.
         private readonly MyIni blockIni = new MyIni();
@@ -132,13 +133,13 @@ namespace IngameScript
 
         public Program()
         {
-            cli = new CLI(this, "Tag and Name", "3.0");
+            cli = new CLI(this, "Tagger");
             cli.Add("run", "Tag and rename blocks", DoRun);
             cli.Add("tag", "Add INI tags to blocks", DoTag);
             cli.Add("name", "Rename blocks from their grid and subgrid path", DoName);
             cli.Add("clear", "Clear [general] tags from blocks", DoClearTags);
             cli.Add("dump", "Write a block list to this block's Custom Data", DoDump);
-            cli.Add("config", "Show the active configuration", DoConfig);
+            cli.Add("config", "Print the active [tagger] settings", DoConfig);
             cli.SetDefault("run");
 
             BuildCategoryLookup();
@@ -198,17 +199,17 @@ namespace IngameScript
                 ? UpdateFrequency.Update100
                 : UpdateFrequency.None;
 
-            foreach (string warning in configWarnings) Echo(warning);
+            foreach (string warning in configWarnings) Echo("! " + warning);
         }
 
         public void DoConfig(string argument = null)
         {
-            Echo("[" + ConfigSection + "]");
+            Echo("Tagger | [" + ConfigSection + "]");
             Echo("include_connected_grids=" + (includeConnectedGrids ? "true" : "false"));
             Echo("run_every_minutes=" + runEveryMinutes);
             Echo("watch_config=" + (watchConfig ? "true" : "false"));
             Echo("grid_id=" + gridIdOverride);
-            foreach (string warning in configWarnings) Echo(warning);
+            foreach (string warning in configWarnings) Echo("! " + warning);
         }
 
         public void DoRun(string argument = null) { Process(true, true); }
@@ -229,7 +230,7 @@ namespace IngameScript
                 var gridId = GetComponentId(component);
                 var renameThis = rename && gridId.Length > 0;
                 if (rename && !renameThis)
-                    Echo("Skipped unnamed root grid: " + component.Root.CustomName);
+                    Echo("! Skipped unnamed root grid: " + component.Root.CustomName);
 
                 var subgridPaths = renameThis ? GetSubgridPaths(component, gridId) : null;
                 var spatial = tag && !component.Root.IsStatic
@@ -262,6 +263,8 @@ namespace IngameScript
                                 renamed++;
                             }
                         }
+                        // The HUD marker is the grid, not the block: show just the grid ID.
+                        if (SetHudText(block, gridId)) renamed++;
                     }
 
                     // Tagging rewrites Custom Data, so it can only run on data it could parse.
@@ -269,10 +272,12 @@ namespace IngameScript
                 }
             }
 
-            if (unparsable > 0)
-                Echo(unparsable + " blocks have invalid Custom Data; not tagged, and no override read");
+            Echo("Tagger | " + (rename && tag ? "run" : rename ? "name" : "tag"));
+            Echo(scopeSummary);
             if (rename) Echo("Renamed " + renamed + " blocks");
             if (tag) Echo("Retagged " + tagged + " blocks");
+            if (unparsable > 0)
+                Echo("! " + unparsable + " blocks have invalid Custom Data; not tagged, and no override read");
         }
 
         public void DoClearTags(string argument = null)
@@ -297,15 +302,17 @@ namespace IngameScript
                 }
             }
 
-            if (unparsable > 0) Echo("Skipped " + unparsable + " blocks with invalid Custom Data");
+            Echo("Tagger | clear");
+            Echo(scopeSummary);
             Echo("Cleared tags from " + cleared + " blocks");
+            if (unparsable > 0) Echo("! Skipped " + unparsable + " blocks with invalid Custom Data");
         }
 
         public void DoDump(string argument = null)
         {
             if (!blockIni.TryParse(Me.CustomData))
             {
-                Echo("Cannot write dump: this block's Custom Data is not valid INI");
+                Echo("! Cannot write dump: this block's Custom Data is not valid INI");
                 return;
             }
 
@@ -325,6 +332,7 @@ namespace IngameScript
 
             blockIni.Set(ConfigSection + "_debug", "blocks", listing.ToString());
             Me.CustomData = blockIni.ToString();
+            Echo("Tagger | dump");
             Echo("Dumped " + count + " blocks to Custom Data");
         }
 
@@ -594,6 +602,17 @@ namespace IngameScript
             return blockIni.Get(ConfigSection, NameOverrideKey).ToString().Trim();
         }
 
+        // Antennas and beacons broadcast a HUD label separate from their name. Laser
+        // antennas have none.
+        private static bool SetHudText(IMyTerminalBlock block, string text)
+        {
+            var antenna = block as IMyRadioAntenna;
+            if (antenna != null && antenna.HudText != text) { antenna.HudText = text; return true; }
+            var beacon = block as IMyBeacon;
+            if (beacon != null && beacon.HudText != text) { beacon.HudText = text; return true; }
+            return false;
+        }
+
         // The block's part of the name: its type name (or override) plus any text the user
         // added after it. The grid ID and subgrid path are added by the caller.
         private string GetBlockLabel(IMyTerminalBlock block, string overrideName, string gridId, string subgridPath)
@@ -605,6 +624,7 @@ namespace IngameScript
             var retained = GetRetainedText(block, standardName, overrideName, gridId, subgridPath);
             return retained.Length == 0 ? name : name + " " + retained;
         }
+
 
         // Modded blocks can leave this unset, in which case there is no type name to work from.
         private static string GetDefinitionName(IMyTerminalBlock block)
@@ -708,9 +728,9 @@ namespace IngameScript
             var blockCount = 0;
             foreach (var component in components) blockCount += component.Blocks.Count;
 
-            Echo(includeConnectedGrids
+            scopeSummary = includeConnectedGrids
                 ? "Found " + blockCount + " blocks, including connected grids"
-                : "Found " + blockCount + " blocks on this grid and its mechanical subgrids");
+                : "Found " + blockCount + " blocks on this grid and its mechanical subgrids";
             return components;
         }
 

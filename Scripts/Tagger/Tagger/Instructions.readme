@@ -14,6 +14,8 @@ Text after a block's standard name is retained while its automatic number is rem
 
 Programmable Blocks become `PB`, Timer Blocks become `Timer`, Event Controllers become `EC`, and trailing numbers are removed from standard block type names.
 
+Antennas and beacons are named like any other block (`Flopsy.Antenna`), but their HUD text is set to the grid ID alone (`Flopsy`), so the marker on your HUD shows the ship, not the block. Laser antennas have no HUD text.
+
 Blocks of the same type are not numbered, so several identical blocks share a name. Use `name_override` to tell them apart.
 
 Setup
@@ -30,9 +32,11 @@ Commands
 - `tag`: only add tags.
 - `name`: only rename blocks.
 - `clear`: remove `[general]` tags while preserving other Custom Data.
-- `config`: show the active configuration.
+- `config`: print the active settings.
 - `dump`: write the discovered block list to the programmable block's Custom Data.
-- `help`: show command help.
+- `help`: list commands.
+
+Text after a block's standard name is kept, so name tags used by other scripts, such as `[launchcontrol]` or `[fleet]`, survive renaming.
 
 Configuration
 -------------

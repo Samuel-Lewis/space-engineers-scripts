@@ -1,0 +1,109 @@
+R e a d m e
+-----------
+
+Every install measures its own grid, broadcasts it over antenna, and can show
+the fleet on any LCD or cockpit screen. There is no separate sender or
+dashboard build; which screens a grid shows is only configuration.
+
+SETUP
+-----------
+
+1. Put the script on a PB on each ship and base. It creates a [fleet] section
+   in the PB's Custom Data with defaults that work as-is.
+2. Make sure the grid has a working antenna. Fleet visibility is limited to
+   antenna range and relay chains; a grid out of range simply does not appear.
+3. Add [fleet] to the name of an LCD or cockpit. It gets one display_<n> key
+   per screen in its Custom Data; display_0 is set to onboard, the rest are
+   blank. Fill them in:
+   [fleet]
+   display_0=map heading
+   display_1=fleet
+   display_2=track Miner 1
+   display_3=
+   The PB's own screens have the same keys in the PB section, blank by
+   default.
+
+If the ship has one connector, it is the dock port. With several, mark the
+dock port by adding [fleet] to its name or this to its Custom Data:
+[fleet]
+dock_port=true
+Until one is marked the grid reports FLIGHT.
+
+Grids are identified by their grid name (Info tab). Renaming a grid orphans
+any track target pointed at the old name.
+
+SCREENS
+-----------
+
+onboard              This grid: state lamp, a speed/heading/altitude/crew
+                     readout line with a compass tape, then health, power,
+                     hydrogen, oxygen and cargo bars. Needs no antenna.
+fleet                Table of every grid heard: name, state, health, power,
+                     H2, O2, cargo, speed, time since last broadcast. Stale
+                     rows are greyed.
+map [north|heading]  Self-centred plot of every contact with its callsign.
+                     north (default) keeps north up. heading rotates the map
+                     to the cockpit's nose. The radius auto-fits the farthest
+                     contact, so close contacts bunch up when one is far
+                     away. Ring labels show the range.
+track <grid name>    Onboard layout for one other grid from its last
+                     broadcast, plus last GPS and time since seen.
+
+North is world -Z. In natural gravity the map and heading use the horizontal
+plane; in space north-up uses the world horizontal plane and heading-up uses
+the ship's own deck plane.
+
+PB CONFIGURATION
+-----------
+
+callsign=          Short map label; blank uses the first four characters of the
+                   grid name. Keep it short, labels are always visible.
+channel=FleetTelemetry   Broadcast tag. Every grid must share it. Anyone with
+                   an antenna on the same tag can read the fleet's data.
+stale_seconds=8    Contact greyed after this long without a broadcast.
+drop_seconds=60    Contact removed after this long without a broadcast.
+cockpit=           Which cockpit or remote control supplies speed, heading,
+                   altitude, position and the map's forward direction. Blank
+                   uses the main cockpit, else the first one found. Only set
+                   it on a grid with several controllers facing different
+                   ways. Use the block's current name.
+display_0= display_1=    Roles for the PB's own screens.
+
+Missing keys are restored, invalid values fall back with a warning, and
+malformed INI is left untouched while defaults are used. Edits are picked up
+within about ten seconds or on any command. Other sections in the same Custom
+Data, such as [general] from Tagger or [launchcontrol], are preserved.
+
+WHAT IS MEASURED
+-----------
+
+State     STATION for a static grid; DOCKED when the dock port is locked
+          (Connected), showing the other grid's name when known; else FLIGHT.
+Health    Functional terminal blocks as a share of all terminal blocks.
+Power     Batteries stored / capacity.
+Hydrogen  Hydrogen tanks. Oxygen: all other gas tanks.
+Cargo     Volume used across every block inventory except gas tanks.
+Speed, heading, altitude   From the cockpit. Heading is degrees clockwise
+          from north. Altitude is above sea level, only in natural gravity.
+Crew      Cockpits and remote controls with someone in them.
+A dash means the grid has none of that equipment or cannot measure it.
+
+The script runs at Update100 and broadcasts once per run. Contacts are held
+in memory only and are cleared by recompile or world reload.
+
+WITH LAUNCHCONTROL
+-----------
+
+LaunchControl leaves antennas alone, so docked ships keep broadcasting. Both
+scripts use the same dock port rule, so mark the same connector for both if
+the ship has several. Do not point both scripts at the same screen; a cockpit
+can give one screen to each.
+
+COMMANDS
+-----------
+
+status     Print own telemetry, contacts and warnings. Default.
+config     Print the active settings.
+reload     Reload configuration and rediscover blocks and screens.
+clear      Forget every contact.
+help       List commands.

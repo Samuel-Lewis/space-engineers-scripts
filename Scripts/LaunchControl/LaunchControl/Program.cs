@@ -18,8 +18,7 @@ namespace IngameScript
         const string Section = "launchcontrol";
         const string NameTag = "[launchcontrol]";
         #endregion mdk preserve
-        const string ScriptVersion = "1.0";
-        const double RescanSeconds = 15;
+        const double RescanSeconds = 10;
         const double ReleaseTimeoutSeconds = 2;
 
         // Docked and Flight are the states. Launching, Releasing, and Docking are the
@@ -46,13 +45,14 @@ namespace IngameScript
 
         public Program()
         {
-            cli = new CLI(this, "LaunchControl", ScriptVersion);
+            cli = new CLI(this, "LaunchControl");
             cli.Add("launch", "Check systems, power up, release the dock port (--force skips checks)", DoLaunch);
             cli.Add("dock", "Shut down into docked systems (--force even if not connected)", DoDock);
             cli.Add("restore", "Re-apply the systems for the current state", DoRestore);
-            cli.Add("manual", "Stop managing systems until 'auto'", DoManual);
+            cli.Add("manual", "Stop managing systems until auto", DoManual);
             cli.Add("auto", "Resume managing systems", DoAuto);
-            cli.Add("status", "Show the current state", DoStatus);
+            cli.Add("status", "Print the current state", DoStatus);
+            cli.Add("config", "Print the active [launchcontrol] settings", DoConfig);
             cli.SetDefault("launch");
 
             LoadConfiguration();
@@ -66,10 +66,10 @@ namespace IngameScript
         {
             double dt = Runtime.TimeSinceLastRun.TotalSeconds;
             bool command = (updateSource & (UpdateType.Terminal | UpdateType.Trigger | UpdateType.Script)) != 0;
-            if (command || configuration.Changed) LoadConfiguration();
-
             sinceScan += dt;
-            if (command || sinceScan >= RescanSeconds)
+            bool reload = command || configuration.Changed || BlockConfigurationChanged();
+            if (reload) LoadConfiguration();
+            if (reload || sinceScan >= RescanSeconds)
             {
                 sinceScan = 0;
                 ScanBlocks();
@@ -84,15 +84,28 @@ namespace IngameScript
         {
             configWarnings.Clear();
             configuration = new IniDocument(Me, warning => configWarnings.Add(warning));
-            launchDelay = configuration.Double(Section, "launch_delay", 0.5, 0, 60);
-            dockDelay = configuration.Double(Section, "dock_delay", 0.5, 0, 60);
-            minHydrogen = configuration.Double(Section, "min_hydrogen", 90, 0, 100);
-            minBattery = configuration.Double(Section, "min_battery", 90, 0, 100);
+            launchDelay = configuration.Double(Section, "launch_delay_seconds", 0.5, 0, 60);
+            dockDelay = configuration.Double(Section, "dock_delay_seconds", 0.5, 0, 60);
+            minHydrogen = configuration.Double(Section, "min_hydrogen_percent", 90, 0, 100);
+            minBattery = configuration.Double(Section, "min_battery_percent", 90, 0, 100);
             autoDock = configuration.Bool(Section, "auto_dock", true);
             autoRecover = configuration.Bool(Section, "auto_recover", true);
-            configuration.Int(Section, "use_display", -1, -1, 16);
+            ReadDisplays(Me, configuration, false);
             configuration.CheckKeys(Section);
             configuration.Save();
+        }
+
+        void DoConfig(string argument)
+        {
+            Echo("LaunchControl | [" + Section + "]");
+            Echo("launch_delay_seconds=" + launchDelay);
+            Echo("dock_delay_seconds=" + dockDelay);
+            Echo("min_hydrogen_percent=" + minHydrogen);
+            Echo("min_battery_percent=" + minBattery);
+            Echo("auto_dock=" + (autoDock ? "true" : "false"));
+            Echo("auto_recover=" + (autoRecover ? "true" : "false"));
+            Echo("Dock port: " + PortSummary() + " | Displays: " + dashboard.SurfaceCount + " | Status lights: " + statusLights.Count);
+            foreach (string warning in configWarnings) Echo("! " + warning);
         }
 
         // Connector edges and pending countdowns. Nothing here runs in Manual.
