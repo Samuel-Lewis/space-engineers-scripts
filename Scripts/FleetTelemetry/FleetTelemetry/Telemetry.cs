@@ -1,7 +1,6 @@
 using Sandbox.ModAPI.Ingame;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 using VRage.Game.ModAPI.Ingame;
 using VRageMath;
@@ -41,7 +40,11 @@ namespace IngameScript
 
             const char Separator = '|';
             const int Fields = 17;
-            static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
+            // Fully qualified on purpose: the in-game editor compiles the packaged script
+            // against a fixed set of usings that does not include System.Globalization,
+            // and the packager cannot add one.
+            static readonly System.Globalization.CultureInfo Invariant =
+                System.Globalization.CultureInfo.InvariantCulture;
 
             public string State { get { return Station ? "STATION" : Docked ? "DOCKED" : "FLIGHT"; } }
 
@@ -76,12 +79,16 @@ namespace IngameScript
                 if (string.IsNullOrEmpty(data)) return false;
                 string[] parts = data.Split(Separator);
                 if (parts.Length != Fields || parts[0].Length == 0) return false;
-                double health, power, hydrogen, oxygen, cargo, speed, heading, altitude, sealevel, x, y, z;
-                int crew;
+                // Seeded rather than left to definite-assignment analysis across the
+                // short-circuiting chain below: the in-game compiler is stricter about
+                // out parameters reached through || than the one MDK2 builds with.
+                double health = 0, power = 0, hydrogen = 0, oxygen = 0, cargo = 0, speed = 0;
+                double heading = 0, altitude = double.NaN, sealevel = double.NaN, x = 0, y = 0, z = 0;
+                int crew = 0;
                 if (!ParseDouble(parts[3], out health) || !ParseDouble(parts[4], out power) || !ParseDouble(parts[5], out hydrogen)
                     || !ParseDouble(parts[6], out oxygen) || !ParseDouble(parts[7], out cargo) || !ParseDouble(parts[8], out speed)
                     || !ParseDouble(parts[9], out heading) || !ParseHeight(parts[10], out altitude) || !ParseHeight(parts[11], out sealevel)
-                    || !int.TryParse(parts[12], NumberStyles.Integer, Invariant, out crew)
+                    || !int.TryParse(parts[12], System.Globalization.NumberStyles.Integer, Invariant, out crew)
                     || !ParseDouble(parts[13], out x) || !ParseDouble(parts[14], out y) || !ParseDouble(parts[15], out z))
                     return false;
                 into.Name = parts[0];
@@ -120,7 +127,7 @@ namespace IngameScript
 
             static bool ParseDouble(string text, out double value)
             {
-                return double.TryParse(text, NumberStyles.Float, Invariant, out value) && !double.IsNaN(value) && !double.IsInfinity(value);
+                return double.TryParse(text, System.Globalization.NumberStyles.Float, Invariant, out value) && !double.IsNaN(value) && !double.IsInfinity(value);
             }
 
             static bool ParseHeight(string text, out double value)

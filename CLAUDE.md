@@ -10,6 +10,7 @@ The projects use [Malware's Development Kit 2](https://github.com/malforge/mdk2)
 - Maintain the `Instructions.readme` file for every script whenever its behaviour, commands, configuration, or usage changes.
 - Treat each script's `Instructions.readme` as part of the packaged code. Keep it concise and practical, with only the information needed to configure and use the script.
 - Keep programmable block code in the `IngameScript` namespace. The MDK2 packager removes namespaces from the deployed script.
+- The packager cannot add `using` directives: the in-game editor compiles the packaged script against its own fixed list. A `using` that builds under MDK2 can still fail the in-game Check Code. Anything outside that list — `System.Globalization` is the one this repo hits — must be written fully qualified, as `IniDocument` and `Telemetry` do. A green `dotnet build` does not prove a script loads; the in-game check is the acceptance test.
 - Keep `Program` as a public partial class deriving from `MyGridProgram`.
 - Target .NET Framework 4.8 and C# 6, matching the MDK2 programmable block template and the game's scripting restrictions.
 - Reference the current stable `Mal.Mdk2.PbAnalyzers`, `Mal.Mdk2.PbPackager`, and `Mal.Mdk2.References` packages.
