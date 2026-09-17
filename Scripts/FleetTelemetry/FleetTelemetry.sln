@@ -9,6 +9,8 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "CLI", "..\..\Mixins\CLI\CLI
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Display", "..\..\Mixins\Display\Display.shproj", "{143F4FFB-ABF6-43FA-9188-270DD6BD3F51}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "GridMetrics", "..\..\Mixins\GridMetrics\GridMetrics.shproj", "{D12ECBD3-4261-4E39-B87B-51F8373F8B6C}"
+EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "IniHandler", "..\..\Mixins\IniHandler\IniHandler.shproj", "{C4907BFB-A3AB-4083-B654-F66BFF5E5012}"
 EndProject
 Global
@@ -31,9 +33,11 @@ Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		..\..\Mixins\CLI\CLI.projitems*{7d2c1e1a-4b6f-4f2e-9c3b-2a5d8e1f0c11}*SharedItemsImports = 5
 		..\..\Mixins\Display\Display.projitems*{7d2c1e1a-4b6f-4f2e-9c3b-2a5d8e1f0c11}*SharedItemsImports = 5
+		..\..\Mixins\GridMetrics\GridMetrics.projitems*{7d2c1e1a-4b6f-4f2e-9c3b-2a5d8e1f0c11}*SharedItemsImports = 5
 		..\..\Mixins\IniHandler\IniHandler.projitems*{7d2c1e1a-4b6f-4f2e-9c3b-2a5d8e1f0c11}*SharedItemsImports = 5
 		..\..\Mixins\CLI\CLI.projitems*{3a79288e-e133-4c1d-ab4f-92f1326d44bb}*SharedItemsImports = 13
 		..\..\Mixins\Display\Display.projitems*{143f4ffb-abf6-43fa-9188-270dd6bd3f51}*SharedItemsImports = 13
+		..\..\Mixins\GridMetrics\GridMetrics.projitems*{d12ecbd3-4261-4e39-b87b-51f8373f8b6c}*SharedItemsImports = 13
 		..\..\Mixins\IniHandler\IniHandler.projitems*{c4907bfb-a3ab-4083-b654-f66bff5e5012}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

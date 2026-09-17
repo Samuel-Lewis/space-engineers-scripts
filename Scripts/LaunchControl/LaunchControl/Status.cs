@@ -84,11 +84,14 @@ namespace IngameScript
             }
 
             // A blinking lamp needs every tick; a solid one only needs the numbers refreshed.
-            if ((blink > 0 || sinceDraw >= DrawSeconds) && dashboard.SurfaceCount > 0)
+            if ((blink > 0 || sinceDraw >= DrawSeconds) && screens.Count > 0)
             {
                 sinceDraw = 0;
-                dashboard.Draw("LaunchControl", state, colour, blink, PortSummary() + "  |  " + lastAction,
-                    gauges, issues, elapsed);
+                string subtitle = PortSummary() + "  |  " + lastAction;
+                // Drawn one screen at a time because the title is a per-block setting.
+                foreach (Screen screen in screens)
+                    dashboard.DrawStatus(screen.Surface, "LaunchControl", state, colour, blink, subtitle,
+                        null, float.NaN, gauges, issues, elapsed, screen.ShowTitle);
             }
         }
 

@@ -11,7 +11,10 @@ namespace IngameScript
         // "North" in space: a fixed world axis, so north-up agrees between grids.
         static readonly Vector3D WorldNorth = -Vector3D.UnitZ;
         static readonly Vector3D WorldUp = Vector3D.UnitY;
-        static readonly string[] FleetHeaders = { "Name", "State", "Health", "Power", "H2", "O2", "Cargo", "Speed", "Seen" };
+        static readonly string[] FleetHeaders = { "Name", "State", "Health", "Power", "H2", "O2", "Cargo", "Speed", "Link" };
+        // Quarter marks around the map, clockwise from the top of the plot.
+        static readonly string[] NorthCompass = { "N", "E", "S", "W" };
+        static readonly string[] RelativeCompass = { "FWD", "STBD", "AFT", "PORT" };
 
         readonly SurfaceDashboard dashboard = new SurfaceDashboard();
         readonly List<SurfaceDashboard.Gauge> gauges = new List<SurfaceDashboard.Gauge>();
@@ -23,6 +26,9 @@ namespace IngameScript
         readonly Color flightColour = new Color(50, 130, 255);
         readonly Color stationColour = new Color(180, 120, 255);
         readonly Color staleColour = new Color(120, 138, 160);
+        readonly Color liveColour = new Color(90, 190, 230);
+        readonly Color warningColour = new Color(255, 160, 40);
+        readonly Color lostColour = new Color(255, 90, 70);
 
         void Render()
         {
@@ -44,7 +50,7 @@ namespace IngameScript
             if (antennaWarning != null) issues.Add(antennaWarning);
             issues.AddRange(configWarnings);
             dashboard.DrawStatus(screen.Surface, Title, local.State, StateColour(local), 0,
-                Subtitle(local), Readouts(local), Tape(local), Gauges(local), issues, totalSeconds);
+                Subtitle(local), Readouts(local), Tape(local), Gauges(local), issues, totalSeconds, screen.ShowTitle);
         }
 
         void DrawTrack(Screen screen)
@@ -66,9 +72,10 @@ namespace IngameScript
             bool stale = contact.Stale(totalSeconds, config.StaleSeconds);
             issues.Clear();
             if (stale) issues.Add("Stale: last update " + AgeText(contact.Age(totalSeconds)) + " ago.");
-            string subtitle = "Seen " + AgeText(contact.Age(totalSeconds)) + " ago  |  " + Subtitle(data);
+            string subtitle = "Link " + LinkText(contact) + "  |  " + Subtitle(data);
             dashboard.DrawStatus(screen.Surface, Title + "  |  " + data.Name, data.State + (stale ? " ?" : ""),
-                stale ? staleColour : StateColour(data), 0, subtitle, Readouts(data), Tape(data), Gauges(data), issues, totalSeconds);
+                stale ? staleColour : StateColour(data), 0, subtitle, Readouts(data), Tape(data), Gauges(data),
+                issues, totalSeconds, screen.ShowTitle);
         }
 
         static string Subtitle(Telemetry data)
@@ -83,36 +90,54 @@ namespace IngameScript
         }
 
         // Motion and crew as one instrument line; heading also drives the compass tape.
+        // A station has no speed, facing or height worth reporting, so it gets neither
+        // the motion readouts nor the compass.
         List<SurfaceDashboard.Readout> Readouts(Telemetry data)
         {
             readouts.Clear();
-            readouts.Add(new SurfaceDashboard.Readout("SPD", SpeedText(data.Speed)));
-            readouts.Add(new SurfaceDashboard.Readout("HDG", HeadingText(data.Heading)));
-            if (!double.IsNaN(data.Altitude))
-                readouts.Add(new SurfaceDashboard.Readout("ALT", Math.Round(data.Altitude).ToString("#,0") + " m"));
+            if (!data.Station)
+            {
+                readouts.Add(new SurfaceDashboard.Readout("SPD", SpeedText(data.Speed)));
+                readouts.Add(new SurfaceDashboard.Readout("HDG", HeadingText(data.Heading)));
+                AddAltitude(data);
+            }
             readouts.Add(new SurfaceDashboard.Readout("CREW", data.Crew.ToString()));
             return readouts;
         }
 
+        // Height above the ground below, which is what matters while flying. Past
+        // high_altitude_metres the ground stops being the useful reference and the
+        // figure switches to height above sea level, labelled so it is not mistaken.
+        void AddAltitude(Telemetry data)
+        {
+            if (double.IsNaN(data.Altitude)) return;
+            bool high = data.Altitude >= config.HighAltitude && !double.IsNaN(data.SeaLevel);
+            double value = high ? data.SeaLevel : data.Altitude;
+            readouts.Add(new SurfaceDashboard.Readout(high ? "ASL" : "AGL", Math.Round(value).ToString("#,0") + " m"));
+        }
+
         static float Tape(Telemetry data)
         {
-            return data.Heading < 0 ? float.NaN : (float)data.Heading;
+            return data.Station || data.Heading < 0 ? float.NaN : (float)data.Heading;
         }
 
         List<SurfaceDashboard.Gauge> Gauges(Telemetry data)
         {
             gauges.Clear();
-            if (data.Health >= 0)
-                gauges.Add(new SurfaceDashboard.Gauge("Health", "MyObjectBuilder_Component/SteelPlate", data.Health / 100, 0.9, Math.Floor(data.Health) + "%"));
-            if (data.Power >= 0)
-                gauges.Add(new SurfaceDashboard.Gauge("Power", "IconEnergy", data.Power / 100, 0.2, Math.Floor(data.Power) + "%"));
-            if (data.Hydrogen >= 0)
-                gauges.Add(new SurfaceDashboard.Gauge("Hydrogen", "IconHydrogen", data.Hydrogen / 100, 0.2, Math.Floor(data.Hydrogen) + "%"));
-            if (data.Oxygen >= 0)
-                gauges.Add(new SurfaceDashboard.Gauge("Oxygen", "IconOxygen", data.Oxygen / 100, 0.2, Math.Floor(data.Oxygen) + "%"));
-            if (data.Cargo >= 0)
-                gauges.Add(new SurfaceDashboard.Gauge("Cargo", "MyObjectBuilder_Ore/Iron", data.Cargo / 100, -1, Math.Floor(data.Cargo) + "%"));
+            AddGauge(data.Health, config.HealthWarning, "Health", "MyObjectBuilder_Component/SteelPlate");
+            AddGauge(data.Power, config.PowerWarning, "Power", "IconEnergy");
+            AddGauge(data.Hydrogen, config.HydrogenWarning, "Hydrogen", "IconHydrogen");
+            AddGauge(data.Oxygen, config.OxygenWarning, "Oxygen", "IconOxygen");
+            // Cargo has no threshold: a full hold is a result, not a fault.
+            AddGauge(data.Cargo, -1, "Cargo", "MyObjectBuilder_Ore/Iron");
             return gauges;
+        }
+
+        void AddGauge(double percent, double warningPercent, string label, string icon)
+        {
+            if (percent < 0) return;
+            gauges.Add(new SurfaceDashboard.Gauge(label, icon, percent / 100,
+                warningPercent < 0 ? -1 : warningPercent / 100, Math.Floor(percent) + "%"));
         }
 
         void DrawFleet(Screen screen)
@@ -124,7 +149,7 @@ namespace IngameScript
                 Telemetry data = contact.Data;
                 bool old = contact.Stale(totalSeconds, config.StaleSeconds);
                 if (old) stale++;
-                rows.Add(new SurfaceDashboard.Row(new[]
+                var cells = new[]
                 {
                     data.Name,
                     data.State,
@@ -134,12 +159,50 @@ namespace IngameScript
                     PercentText(data.Oxygen),
                     PercentText(data.Cargo),
                     SpeedText(data.Speed),
-                    AgeText(contact.Age(totalSeconds))
-                }, old ? staleColour : (Color?)null));
+                    LinkText(contact)
+                };
+                // A stale row greys out as a whole, but its numbers still grade, so a
+                // ship that went quiet low on fuel still reads as a ship in trouble.
+                var colours = new Color?[]
+                {
+                    null, null,
+                    Severity(data.Health, config.HealthWarning),
+                    Severity(data.Power, config.PowerWarning),
+                    Severity(data.Hydrogen, config.HydrogenWarning),
+                    Severity(data.Oxygen, config.OxygenWarning),
+                    null, null,
+                    LinkColour(contact)
+                };
+                rows.Add(new SurfaceDashboard.Row(cells, old ? staleColour : (Color?)null, colours));
             }
             string subtitle = ordered.Count + " contact" + (ordered.Count == 1 ? "" : "s")
                 + (stale > 0 ? "  |  " + stale + " stale" : "") + "  |  " + local.Name;
-            dashboard.DrawTable(screen.Surface, Title + "  |  FLEET", subtitle, FleetHeaders, rows, totalSeconds);
+            dashboard.DrawTable(screen.Surface, Title + "  |  FLEET", subtitle, FleetHeaders, rows, totalSeconds, screen.ShowTitle);
+        }
+
+        // Null leaves the cell on the row's own colour, so only readings that need
+        // attention are picked out.
+        Color? Severity(double percent, double warningPercent)
+        {
+            if (percent < 0) return null;
+            int severity = SurfaceDashboard.Severity(percent / 100, warningPercent / 100);
+            return severity == 2 ? lostColour : severity == 1 ? warningColour : (Color?)null;
+        }
+
+        // How the link stands, rather than a stopwatch that reads 0s almost always.
+        string LinkText(Contact contact)
+        {
+            double age = contact.Age(totalSeconds);
+            return age <= config.StaleSeconds ? "LIVE" : AgeText(age);
+        }
+
+        // Amber once broadcasts start being missed, red once the contact is close
+        // enough to drop_seconds that it is about to fall off the roster.
+        Color? LinkColour(Contact contact)
+        {
+            double age = contact.Age(totalSeconds);
+            if (age <= config.StaleSeconds) return liveColour;
+            return age >= config.DropSeconds * 0.75 ? lostColour : warningColour;
         }
 
         static string PercentText(double value)
@@ -163,6 +226,10 @@ namespace IngameScript
         {
             Vector3D n, north, east, f;
             bool inGravity = PlaneBasis(out n, out north, out east);
+            // The plane bearings are measured on, kept even when the map itself switches
+            // to the ship's deck plane below, because a contact's heading was measured
+            // against this one and not against our deck.
+            Vector3D bearingNorth = north, bearingEast = east;
             bool headingUp = screen.HeadingUp && cockpit != null;
             if (headingUp && !inGravity)
             {
@@ -171,6 +238,7 @@ namespace IngameScript
                 north = Project(WorldNorth, n);
                 if (north.LengthSquared() < 1e-6) north = Project(Vector3D.UnitX, n);
                 north = Vector3D.Normalize(north);
+                east = Vector3D.Cross(north, n);
             }
             if (headingUp)
             {
@@ -184,11 +252,13 @@ namespace IngameScript
             plotted.Clear();
             foreach (Contact contact in ordered)
             {
-                Vector3D d = contact.Data.Position - local.Position;
+                Telemetry data = contact.Data;
+                Vector3D d = data.Position - local.Position;
                 bool old = contact.Stale(totalSeconds, config.StaleSeconds);
                 plotted.Add(new SurfaceDashboard.Contact(Vector3D.Dot(d, r), Vector3D.Dot(d, f),
-                    contact.Data.Callsign.Length > 0 ? contact.Data.Callsign : contact.Data.Name,
-                    old ? staleColour : StateColour(contact.Data)));
+                    data.Callsign.Length > 0 ? data.Callsign : data.Name,
+                    old ? staleColour : StateColour(data),
+                    ContactHeading(data, bearingNorth, bearingEast, f, r)));
             }
 
             // Own heading marker, clockwise from screen-up. NaN draws a dot when there
@@ -204,7 +274,22 @@ namespace IngameScript
             string mode = headingUp ? "Heading-up" : screen.HeadingUp ? "North-up (no cockpit)" : "North-up";
             string subtitle = mode + "  |  " + HeadingText(local.Heading) + "  |  " + SpeedText(local.Speed)
                 + "  |  " + ordered.Count + " contact" + (ordered.Count == 1 ? "" : "s");
-            dashboard.DrawRadar(screen.Surface, Title + "  |  MAP", subtitle, plotted, heading);
+            dashboard.DrawRadar(screen.Surface, Title + "  |  MAP", subtitle, plotted, heading,
+                headingUp ? RelativeCompass : NorthCompass, screen.ShowTitle);
+        }
+
+        // A contact broadcasts its facing as a bearing on its own horizontal plane, so
+        // the arrow is rebuilt from that bearing using this grid's bearing plane, then
+        // projected onto whatever plane the map is drawn on. Exact in space, where every
+        // grid shares one reference plane, and close enough on a planet for grids near
+        // enough to hear each other. A contact with no heading to report, such as a
+        // station, plots as a plain dot.
+        static float ContactHeading(Telemetry data, Vector3D north, Vector3D east, Vector3D f, Vector3D r)
+        {
+            if (data.Heading < 0) return float.NaN;
+            double radians = data.Heading * Math.PI / 180;
+            Vector3D facing = north * Math.Cos(radians) + east * Math.Sin(radians);
+            return (float)Math.Atan2(Vector3D.Dot(facing, r), Vector3D.Dot(facing, f));
         }
 
         static string Gps(Vector3D p)

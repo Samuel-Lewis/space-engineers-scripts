@@ -45,27 +45,48 @@ namespace IngameScript
                 }
             }
 
-            // One row of DrawTable. Colour null uses the default foreground.
+            // One row of DrawTable. Colour null uses the default foreground. CellColours,
+            // when given, overrides Colour for any cell it has a colour for, so a row can
+            // grade individual numbers by severity.
             public struct Row
             {
                 public string[] Cells;
                 public Color? Colour;
+                public Color?[] CellColours;
 
                 public Row(string[] cells, Color? colour)
                 {
                     Cells = cells;
                     Colour = colour;
+                    CellColours = null;
+                }
+
+                public Row(string[] cells, Color? colour, Color?[] cellColours)
+                {
+                    Cells = cells;
+                    Colour = colour;
+                    CellColours = cellColours;
+                }
+
+                public Color ColourOf(int cell, Color fallback)
+                {
+                    if (CellColours != null && cell < CellColours.Length && CellColours[cell].HasValue)
+                        return CellColours[cell].Value;
+                    return Colour ?? fallback;
                 }
             }
 
             // One plotted contact for DrawRadar. X is metres to the right, Y metres up
             // the screen; the caller has already projected and rotated the offset.
+            // Heading is the contact's facing in the same frame, clockwise from screen-up
+            // in radians; NaN draws a plain dot instead of an arrow.
             public struct Contact
             {
                 public double X;
                 public double Y;
                 public string Label;
                 public Color Colour;
+                public float Heading;
 
                 public Contact(double x, double y, string label, Color colour)
                 {
@@ -73,7 +94,19 @@ namespace IngameScript
                     Y = y;
                     Label = label;
                     Colour = colour;
+                    Heading = float.NaN;
                 }
+
+                public Contact(double x, double y, string label, Color colour, float heading)
+                {
+                    X = x;
+                    Y = y;
+                    Label = label;
+                    Colour = colour;
+                    Heading = heading;
+                }
+
+                public double Range { get { return Math.Sqrt(X * X + Y * Y); } }
             }
 
             const string Font = "Debug";
@@ -82,7 +115,6 @@ namespace IngameScript
             // Auto-fit never zooms in past this radius, so a lone close contact is
             // not pinned to the edge of the plot.
             const double MinimumRadarRadius = 50;
-            readonly List<IMyTextSurface> surfaces = new List<IMyTextSurface>();
             readonly StringBuilder measurement = new StringBuilder();
             readonly List<string> wrapped = new List<string>();
             readonly Color background = new Color(8, 12, 18);
@@ -94,27 +126,8 @@ namespace IngameScript
             readonly Color warningColour = new Color(255, 160, 40);
             readonly Color errorColour = new Color(255, 90, 70);
 
-            public int SurfaceCount { get { return surfaces.Count; } }
-
-            public void SetSurfaces(List<IMyTextSurface> selectedSurfaces)
-            {
-                bool unchanged = selectedSurfaces != null && surfaces.Count == selectedSurfaces.Count;
-                for (int i = 0; unchanged && i < surfaces.Count; i++)
-                    unchanged = surfaces[i] == selectedSurfaces[i];
-                if (unchanged) return;
-                surfaces.Clear();
-                if (selectedSurfaces == null) return;
-                for (int i = 0; i < selectedSurfaces.Count; i++)
-                {
-                    IMyTextSurface surface = selectedSurfaces[i];
-                    if (surface == null || surfaces.Contains(surface)) continue;
-                    Prepare(surface);
-                    surfaces.Add(surface);
-                }
-            }
-
-            // Switches a surface to sprite mode. Callers drawing individual surfaces with
-            // the single-surface methods below must call this once per surface first.
+            // Switches a surface to sprite mode. Call this once per surface before
+            // drawing to it.
             public void Prepare(IMyTextSurface surface)
             {
                 surface.ContentType = ContentType.SCRIPT;
@@ -122,26 +135,22 @@ namespace IngameScript
                 surface.ScriptBackgroundColor = background;
             }
 
-            // blinkSeconds matches IMyLightingBlock.BlinkIntervalSeconds: 0 is solid,
-            // otherwise the lamp is lit for the first half of each interval.
-            public void Draw(string title, string state, Color lampColour, float blinkSeconds,
-                string subtitle, List<Gauge> gauges, List<string> issues, double elapsedSeconds)
-            {
-                for (int i = 0; i < surfaces.Count; i++)
-                    DrawStatus(surfaces[i], title, state, lampColour, blinkSeconds, subtitle, null, float.NaN, gauges, issues, elapsedSeconds);
-            }
-
-            // Single-surface form of Draw for callers that manage their own surface list.
-            // readouts (optional) is an instrument line between the subtitle and the gauges;
-            // headingDegrees (NaN to skip) adds a compass tape under it.
+            // The script's own screen: a lamp, a state, an optional instrument line and
+            // compass tape, gauges, then issues. blinkSeconds matches
+            // IMyLightingBlock.BlinkIntervalSeconds: 0 is solid, otherwise the lamp is lit
+            // for the first half of each interval. readouts (optional) is an instrument
+            // line between the subtitle and the gauges; headingDegrees (NaN to skip) adds
+            // a compass tape under it.
             public void DrawStatus(IMyTextSurface surface, string title, string state, Color lampColour, float blinkSeconds,
-                string subtitle, List<Readout> readouts, float headingDegrees, List<Gauge> gauges, List<string> issues, double elapsedSeconds)
+                string subtitle, List<Readout> readouts, float headingDegrees, List<Gauge> gauges, List<string> issues,
+                double elapsedSeconds, bool showTitle = true)
             {
                 bool lit = blinkSeconds <= 0 || elapsedSeconds % blinkSeconds < blinkSeconds / 2;
-                DrawSurface(surface, title, state, lampColour, lit, subtitle, readouts, headingDegrees, gauges, issues, elapsedSeconds);
+                DrawSurface(surface, title, state, lampColour, lit, subtitle, readouts, headingDegrees, gauges, issues, elapsedSeconds, showTitle);
             }
 
-            // Header plus a centred message, for empty or misconfigured screens.
+            // Header plus a centred message, for empty or misconfigured screens. The title
+            // always shows here: without it the screen gives no clue which script owns it.
             public void DrawMessage(IMyTextSurface surface, string title, string message, string detail)
             {
                 Vector2 size = surface.SurfaceSize;
@@ -176,7 +185,7 @@ namespace IngameScript
             // cell and the text scales down until every column fits. Rows beyond the
             // surface page on the PageSeconds cycle.
             public void DrawTable(IMyTextSurface surface, string title, string subtitle,
-                string[] headers, List<Row> rows, double elapsedSeconds)
+                string[] headers, List<Row> rows, double elapsedSeconds, bool showTitle = true)
             {
                 Vector2 size = surface.SurfaceSize;
                 if (size.X < 1 || size.Y < 1 || headers == null) return;
@@ -195,7 +204,8 @@ namespace IngameScript
                 using (MySpriteDrawFrame frame = surface.DrawFrame())
                 {
                     Rect(frame, origin + size / 2f, size, background);
-                    float y = DrawHeader(frame, surface, title, left, origin.Y + padding, width, scale);
+                    float y = origin.Y + padding;
+                    if (showTitle) y = DrawHeader(frame, surface, title, left, y, width, scale);
                     Text(frame, Fit(surface, subtitle, width, scale), new Vector2(left, y), scale, muted, TextAlignment.LEFT);
                     y += Measure(surface, "Ag", scale).Y + 10f * unit;
 
@@ -250,11 +260,11 @@ namespace IngameScript
                     for (int r = first; r < end; r++)
                     {
                         Row row = rows[r];
-                        Color colour = row.Colour ?? foreground;
                         x = left;
                         for (int c = 0; c < columns && row.Cells != null && c < row.Cells.Length; c++)
                         {
-                            Text(frame, Fit(surface, row.Cells[c], widths[c], textScale), new Vector2(x, y), textScale, colour, TextAlignment.LEFT);
+                            Text(frame, Fit(surface, row.Cells[c], widths[c], textScale), new Vector2(x, y), textScale,
+                                row.ColourOf(c, foreground), TextAlignment.LEFT);
                             x += widths[c] + gap;
                         }
                         y += rowHeight;
@@ -265,11 +275,15 @@ namespace IngameScript
                 }
             }
 
-            // Self-centred plot. The radius auto-fits the farthest contact (never below
-            // MinimumRadarRadius). headingRadians rotates the centre marker clockwise
-            // from screen-up; pass NaN to draw a plain dot instead.
+            // Self-centred plot. The radius auto-fits the farthest contact, snapped up to a
+            // round number (never below MinimumRadarRadius) so the ring labels and the scale
+            // bar read evenly. headingRadians rotates the centre marker clockwise from
+            // screen-up; pass NaN to draw a plain dot instead. compass, when given, is four
+            // marks for the quarters starting at the top of the plot and going clockwise,
+            // such as N/E/S/W for a north-up view. A plot with room to spare gets quarter
+            // rings, bearing marks and a range under each contact.
             public void DrawRadar(IMyTextSurface surface, string title, string subtitle,
-                List<Contact> contacts, float headingRadians)
+                List<Contact> contacts, float headingRadians, string[] compass = null, bool showTitle = true)
             {
                 Vector2 size = surface.SurfaceSize;
                 if (size.X < 1 || size.Y < 1) return;
@@ -277,6 +291,7 @@ namespace IngameScript
                 float unit = Math.Min(size.X / 512f, size.Y / 256f);
                 float padding = 18f * unit;
                 float left = origin.X + padding;
+                float right = origin.X + size.X - padding;
                 float width = size.X - 2 * padding;
                 float scale = .9f * unit;
                 float labelScale = scale * .7f;
@@ -285,37 +300,88 @@ namespace IngameScript
                 using (MySpriteDrawFrame frame = surface.DrawFrame())
                 {
                     Rect(frame, origin + size / 2f, size, background);
-                    float y = DrawHeader(frame, surface, title, left, origin.Y + padding, width, scale);
+                    float y = origin.Y + padding;
+                    if (showTitle) y = DrawHeader(frame, surface, title, left, y, width, scale);
                     Text(frame, Fit(surface, subtitle, width, scale), new Vector2(left, y), scale, muted, TextAlignment.LEFT);
                     y += Measure(surface, "Ag", scale).Y + 8f * unit;
 
                     float bottom = origin.Y + size.Y - padding;
                     float labelHeight = Measure(surface, "Ag", labelScale).Y;
-                    // Leave room under the plot for a label on a contact at the edge.
-                    float plotRadius = Math.Min(width, bottom - y - labelHeight) / 2;
+                    // Leave room under the plot for a label on a contact at the edge, and
+                    // below that for the scale bar.
+                    // Under the plot, in order: a contact's label, its range on a detailed
+                    // plot, then the scale bar. All three are reserved so they never
+                    // overlap, detailed or not.
+                    float belowPlot = labelHeight * 3 + 14f * unit;
+                    float plotRadius = Math.Min(width, bottom - y - belowPlot) / 2;
                     if (plotRadius < 20f * unit) return;
                     Vector2 centre = new Vector2(origin.X + size.X / 2, y + plotRadius);
+                    bool detailed = plotRadius >= 100f * unit;
 
-                    double radius = MinimumRadarRadius;
-                    for (int i = 0; i < count; i++)
-                        radius = Math.Max(radius, Math.Sqrt(contacts[i].X * contacts[i].X + contacts[i].Y * contacts[i].Y));
-                    radius *= 1.05;
+                    double reach = 0;
+                    for (int i = 0; i < count; i++) reach = Math.Max(reach, contacts[i].Range);
+                    double radius = NiceRadius(reach);
 
                     Sprite(frame, "Circle", centre, new Vector2(plotRadius * 2, plotRadius * 2), panel);
-                    Sprite(frame, "CircleHollow", centre, new Vector2(plotRadius * 2, plotRadius * 2), track);
-                    Sprite(frame, "CircleHollow", centre, new Vector2(plotRadius, plotRadius), track);
+                    int rings = detailed ? 4 : 2;
+                    for (int ring = 1; ring <= rings; ring++)
+                    {
+                        float diameter = plotRadius * 2 * ring / rings;
+                        Sprite(frame, "CircleHollow", centre, new Vector2(diameter, diameter), track);
+                    }
                     Rect(frame, centre, new Vector2(plotRadius * 2, 1f * unit), track);
                     Rect(frame, centre, new Vector2(1f * unit, plotRadius * 2), track);
-                    Text(frame, Range(radius), new Vector2(origin.X + size.X - padding, y), labelScale, muted, TextAlignment.RIGHT);
-                    Text(frame, Range(radius / 2), new Vector2(centre.X + 4f * unit, centre.Y - plotRadius / 2 - labelHeight), labelScale, muted, TextAlignment.LEFT);
+
+                    // Only the half and outer rings are labelled; the quarters are there to
+                    // judge distance by eye, and labelling them all just adds clutter.
+                    Text(frame, Range(radius), new Vector2(right, y), labelScale, muted, TextAlignment.RIGHT);
+                    Text(frame, Range(radius / 2), new Vector2(centre.X + 4f * unit, centre.Y - plotRadius / 2 - labelHeight),
+                        labelScale, muted, TextAlignment.LEFT);
+
+                    if (detailed)
+                    {
+                        // Bearing marks every 30 degrees around the rim, lying along the
+                        // radius, with the four quarters named when the caller supplied
+                        // names for them.
+                        bool named = compass != null && compass.Length == 4;
+                        for (int degree = 0; degree < 360; degree += 30)
+                        {
+                            double radians = degree * Math.PI / 180;
+                            var direction = new Vector2((float)Math.Sin(radians), (float)-Math.Cos(radians));
+                            bool quarter = degree % 90 == 0;
+                            float tick = (quarter ? 9f : 5f) * unit;
+                            var mark = new MySprite(SpriteType.TEXTURE, "SquareSimple",
+                                centre + direction * (plotRadius - tick / 2), new Vector2(2f * unit, tick), muted);
+                            mark.RotationOrScale = (float)radians;
+                            frame.Add(mark);
+                            if (!quarter || !named) continue;
+                            Vector2 at = centre + direction * (plotRadius - tick - labelHeight * .8f);
+                            Text(frame, compass[degree / 90] ?? "", new Vector2(at.X, at.Y - labelHeight / 2),
+                                labelScale, muted, TextAlignment.CENTER);
+                        }
+                    }
 
                     float dot = 10f * unit;
                     for (int i = 0; i < count; i++)
                     {
                         Contact contact = contacts[i];
                         Vector2 position = centre + new Vector2((float)(contact.X / radius * plotRadius), (float)(-contact.Y / radius * plotRadius));
-                        Sprite(frame, "Circle", position, new Vector2(dot, dot), contact.Colour);
-                        Text(frame, contact.Label ?? "", new Vector2(position.X, position.Y + dot / 2 + 1f * unit), labelScale, contact.Colour, TextAlignment.CENTER);
+                        if (float.IsNaN(contact.Heading))
+                            Sprite(frame, "Circle", position, new Vector2(dot, dot), contact.Colour);
+                        else
+                        {
+                            // A contact that reported a heading gets an arrow pointing the
+                            // way it is facing, in the same frame as the plot.
+                            var arrow = new MySprite(SpriteType.TEXTURE, "Triangle", position,
+                                new Vector2(dot * 1.4f, dot * 1.4f), contact.Colour);
+                            arrow.RotationOrScale = contact.Heading;
+                            frame.Add(arrow);
+                        }
+                        float labelY = position.Y + dot / 2 + 1f * unit;
+                        Text(frame, contact.Label ?? "", new Vector2(position.X, labelY), labelScale, contact.Colour, TextAlignment.CENTER);
+                        if (detailed)
+                            Text(frame, Range(contact.Range), new Vector2(position.X, labelY + labelHeight),
+                                labelScale, muted, TextAlignment.CENTER);
                     }
 
                     float marker = 16f * unit;
@@ -327,12 +393,35 @@ namespace IngameScript
                         sprite.RotationOrScale = headingRadians;
                         frame.Add(sprite);
                     }
+
+                    // Scale bar: half the plot radius, so its label is the half-ring value.
+                    float barY = centre.Y + plotRadius + labelHeight * 2 + 10f * unit;
+                    float barWidth = plotRadius / 2;
+                    if (barY + labelHeight <= bottom)
+                    {
+                        Rect(frame, new Vector2(left + barWidth / 2, barY), new Vector2(barWidth, 2f * unit), muted);
+                        Rect(frame, new Vector2(left, barY - 2f * unit), new Vector2(2f * unit, 6f * unit), muted);
+                        Rect(frame, new Vector2(left + barWidth, barY - 2f * unit), new Vector2(2f * unit, 6f * unit), muted);
+                        Text(frame, Range(radius / 2), new Vector2(left + barWidth + 8f * unit, barY - labelHeight / 2),
+                            labelScale, muted, TextAlignment.LEFT);
+                    }
                 }
+            }
+
+            // Smallest round number at or above the farthest contact. The steps all halve
+            // and quarter cleanly, so ring labels never land on values like 26 m.
+            static double NiceRadius(double reach)
+            {
+                double value = Math.Max(MinimumRadarRadius, reach);
+                double power = Math.Pow(10, Math.Floor(Math.Log10(value)));
+                double steps = value / power;
+                double step = steps <= 1 ? 1 : steps <= 2 ? 2 : steps <= 4 ? 4 : steps <= 5 ? 5 : 10;
+                return step * power;
             }
 
             static string Range(double metres)
             {
-                return metres >= 1000 ? (metres / 1000).ToString("0.0") + " km" : metres.ToString("0") + " m";
+                return metres >= 1000 ? (metres / 1000).ToString("0.##") + " km" : metres.ToString("0") + " m";
             }
 
             // Draws the muted uppercase title and returns the y just below it.
@@ -346,7 +435,8 @@ namespace IngameScript
             }
 
             void DrawSurface(IMyTextSurface surface, string title, string state, Color lampColour,
-                bool lit, string subtitle, List<Readout> readouts, float headingDegrees, List<Gauge> gauges, List<string> issues, double elapsedSeconds)
+                bool lit, string subtitle, List<Readout> readouts, float headingDegrees, List<Gauge> gauges,
+                List<string> issues, double elapsedSeconds, bool showTitle)
             {
                 Vector2 size = surface.SurfaceSize;
                 if (size.X < 1 || size.Y < 1) return;
@@ -367,14 +457,18 @@ namespace IngameScript
                     Rect(frame, origin + size / 2f, size, background);
 
                     // Header
-                    Text(frame, Fit(surface, (title ?? "").ToUpperInvariant(), width, scale * .75f),
-                        new Vector2(left, y), scale * .75f, muted, TextAlignment.LEFT);
-                    y += lineHeight * .75f + 10f * unit;
+                    if (showTitle)
+                    {
+                        Text(frame, Fit(surface, (title ?? "").ToUpperInvariant(), width, scale * .75f),
+                            new Vector2(left, y), scale * .75f, muted, TextAlignment.LEFT);
+                        y += lineHeight * .75f + 10f * unit;
+                    }
 
-                    // Lamp and state. The glow is the widest part, so it sets the column
-                    // and the row so nothing spills past the padding.
-                    float lamp = 44f * unit;
-                    float glow = lamp * 1.7f;
+                    // Lamp and state. Sized to read as a heading rather than a billboard:
+                    // the glow is the widest part, so it sets the column and the row so
+                    // nothing spills past the padding.
+                    float lamp = 22f * unit;
+                    float glow = lamp * 1.5f;
                     Vector2 lampCentre = new Vector2(left + glow / 2, y + glow / 2);
                     Color lampDim = new Color(lampColour.R / 5, lampColour.G / 5, lampColour.B / 5);
                     if (lit)
@@ -388,8 +482,8 @@ namespace IngameScript
                     Sprite(frame, "CircleHollow", lampCentre, new Vector2(lamp, lamp),
                         lit ? foreground : new Color(60, 70, 84));
 
-                    float stateX = left + glow + 12f * unit;
-                    float stateScale = scale * 2.4f;
+                    float stateX = left + glow + 10f * unit;
+                    float stateScale = scale * 1.25f;
                     while (stateScale > scale && Measure(surface, state, stateScale).X > right - stateX)
                         stateScale -= scale * .1f;
                     Vector2 stateSize = Measure(surface, state, stateScale);
@@ -555,14 +649,22 @@ namespace IngameScript
                         new Vector2(2f * unit, barHeight + 6f * unit), foreground);
             }
 
-            // Red below the threshold. Orange in the first WarningBand of the room above it,
-            // so a 45% threshold turns orange below 45 + 0.3 * 55 = 61.5%.
+            // 0 healthy, 1 warning, 2 critical. Critical below the threshold, warning in
+            // the first WarningBand of the room above it, so a 45% threshold warns below
+            // 45 + 0.3 * 55 = 61.5%. Public so a caller colouring text by severity grades
+            // it exactly the way the bars do.
+            public static int Severity(double fraction, double threshold)
+            {
+                if (threshold < 0) return 0;
+                if (fraction < threshold) return 2;
+                if (fraction < threshold + WarningBand * (1 - threshold)) return 1;
+                return 0;
+            }
+
             Color GaugeColour(Gauge gauge)
             {
-                if (gauge.Threshold < 0) return goodColour;
-                if (gauge.Fraction < gauge.Threshold) return errorColour;
-                if (gauge.Fraction < gauge.Threshold + WarningBand * (1 - gauge.Threshold)) return warningColour;
-                return goodColour;
+                int severity = Severity(gauge.Fraction, gauge.Threshold);
+                return severity == 2 ? errorColour : severity == 1 ? warningColour : goodColour;
             }
 
             void Rect(MySpriteDrawFrame frame, Vector2 centre, Vector2 size, Color colour)

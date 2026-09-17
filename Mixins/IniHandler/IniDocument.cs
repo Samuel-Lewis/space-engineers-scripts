@@ -42,11 +42,26 @@ namespace IngameScript
             public string String(string section, string key, string defaultValue = "",
                 Func<string, bool> validate = null, string expected = "a valid value")
             {
+                return Read(section, key, defaultValue, validate, expected, true);
+            }
+
+            // A setting with no value of its own. Absent keys are left absent rather than
+            // written back blank, so Custom Data only ever lists settings that do something.
+            public string Optional(string section, string key,
+                Func<string, bool> validate = null, string expected = "a valid value")
+            {
+                return Read(section, key, "", validate, expected, false);
+            }
+
+            string Read(string section, string key, string defaultValue,
+                Func<string, bool> validate, string expected, bool writeDefault)
+            {
                 bool exists = Has(section, key);
                 defaultValue = defaultValue ?? "";
                 if (!Valid) return defaultValue;
                 if (!exists)
                 {
+                    if (!writeDefault) return defaultValue;
                     ini.Set(section, key, defaultValue);
                     dirty = true;
                     return defaultValue;

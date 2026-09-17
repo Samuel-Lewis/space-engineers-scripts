@@ -60,18 +60,26 @@ namespace IngameScript
             Echo("FleetTelemetry | " + local.State + " | " + local.Name + " (" + local.Callsign + ")");
             Echo("Health " + PercentText(local.Health) + "  Power " + PercentText(local.Power) + "  H2 " + PercentText(local.Hydrogen)
                 + "  O2 " + PercentText(local.Oxygen) + "  Cargo " + PercentText(local.Cargo));
-            Echo("Speed " + SpeedText(local.Speed) + "  Heading " + HeadingText(local.Heading)
-                + (double.IsNaN(local.Altitude) ? "" : "  Alt " + Math.Round(local.Altitude) + " m") + "  Crew " + local.Crew);
+            if (local.Station) Echo("Crew " + local.Crew);
+            else Echo("Speed " + SpeedText(local.Speed) + "  Heading " + HeadingText(local.Heading)
+                + AltitudeEcho() + "  Crew " + local.Crew);
             Echo("Contacts: " + ordered.Count + " | Received: " + received + (rejected > 0 ? " | Rejected: " + rejected : ""));
             for (int i = 0; i < ordered.Count && i < 8; i++)
             {
                 Contact contact = ordered[i];
                 Echo((contact.Stale(totalSeconds, config.StaleSeconds) ? "? " : "  ") + contact.Data.Name
-                    + " " + contact.Data.State + " " + AgeText(contact.Age(totalSeconds)));
+                    + " " + contact.Data.State + " " + LinkText(contact));
             }
             if (ordered.Count > 8) Echo("  +" + (ordered.Count - 8) + " more");
             if (antennaWarning != null) Echo("! " + antennaWarning);
             foreach (string warning in configWarnings) Echo("! " + warning);
+        }
+
+        string AltitudeEcho()
+        {
+            if (double.IsNaN(local.Altitude)) return "";
+            bool high = local.Altitude >= config.HighAltitude && !double.IsNaN(local.SeaLevel);
+            return "  " + (high ? "ASL " + Math.Round(local.SeaLevel) : "AGL " + Math.Round(local.Altitude)) + " m";
         }
 
         void DoConfig()
@@ -81,10 +89,18 @@ namespace IngameScript
             Echo("channel=" + config.Channel);
             Echo("stale_seconds=" + config.StaleSeconds);
             Echo("drop_seconds=" + config.DropSeconds);
+            Echo("health_warning_percent=" + config.HealthWarning);
+            Echo("power_warning_percent=" + config.PowerWarning);
+            Echo("hydrogen_warning_percent=" + config.HydrogenWarning);
+            Echo("oxygen_warning_percent=" + config.OxygenWarning);
+            Echo("high_altitude_metres=" + config.HighAltitude);
+            Echo("show_title=" + (config.ShowTitle ? "true" : "false"));
             Echo("cockpit=" + config.Cockpit);
             Echo("Cockpit: " + (cockpit == null ? "none" : cockpit.CustomName)
                 + " | Dock port: " + (ports.Count == 0 ? "none" : ports.Count == 1 ? ports[0].CustomName : ports.Count + " connectors")
                 + " | Screens: " + screens.Count);
+            // Blank display_<n> keys are no longer written, so list what is available.
+            foreach (string block in surfaceCounts) Echo("Screens on " + block);
             foreach (string warning in configWarnings) Echo("! " + warning);
         }
     }

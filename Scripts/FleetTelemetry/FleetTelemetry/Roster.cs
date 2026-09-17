@@ -18,7 +18,9 @@ namespace IngameScript
             public bool Stale(double now, double staleSeconds) { return Age(now) > staleSeconds; }
         }
 
-        readonly Dictionary<string, Contact> roster = new Dictionary<string, Contact>(StringComparer.Ordinal);
+        // Keyed case-insensitively so a track target matches the way every other name in
+        // configuration does, and so one grid cannot appear twice over a capital letter.
+        readonly Dictionary<string, Contact> roster = new Dictionary<string, Contact>(StringComparer.OrdinalIgnoreCase);
         readonly List<Contact> ordered = new List<Contact>();
         readonly List<string> expired = new List<string>();
         readonly Telemetry incoming = new Telemetry();
@@ -44,7 +46,7 @@ namespace IngameScript
                 string data = message.Data as string;
                 if (!Telemetry.TryDecode(data, incoming)) { rejected++; continue; }
                 // Another PB on this grid, or an echo: this grid's own screens use local data.
-                if (incoming.Name == local.Name) continue;
+                if (string.Equals(incoming.Name, local.Name, StringComparison.OrdinalIgnoreCase)) continue;
                 Contact contact;
                 if (!roster.TryGetValue(incoming.Name, out contact))
                 {

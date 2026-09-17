@@ -41,13 +41,12 @@ Text after a block's standard name is kept, so name tags used by other scripts, 
 Configuration
 -------------
 
-Script settings use the `[tagger]` section of the programmable block. Missing settings are added automatically without comments:
+Script settings use the `[tagger]` section of the programmable block. Settings with a default are added automatically, without comments:
 
     [tagger]
     include_connected_grids=false
     run_every_minutes=0
     watch_config=true
-    grid_id=
 
 `include_connected_grids` also processes grids joined by connectors. It is disabled by default. Mechanical subgrids attached by hinges, rotors, or pistons are always processed.
 
@@ -55,7 +54,7 @@ Set `run_every_minutes` above zero to run automatically at that interval. Keep i
 
 `watch_config` keeps the script ticking so edits to this section are picked up within a few seconds. Turn it off to leave the programmable block idle between commands; settings are then only reloaded when a command runs.
 
-`grid_id` replaces the grid name as the ID for this block's own grid. Use it when the grid name is awkward, or on a non-English client where the script cannot recognise an unnamed grid.
+`grid_id` replaces the grid name as the ID for this block's own grid. Use it when the grid name is awkward, or on a non-English client where the script cannot recognise an unnamed grid. It only matters when you set it, so add the key yourself; the script does not write it.
 
 Invalid values use defaults and report a warning. Malformed INI is preserved while defaults are used; repairing it resumes saving. Use one key=value per line.
 

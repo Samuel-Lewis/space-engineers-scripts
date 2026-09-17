@@ -44,13 +44,16 @@ during a launch cancels it.
 DISPLAYS AND LIGHTS
 -----------
 
-Add [launchcontrol] to the name of an LCD or cockpit. It gets one display_<n>
-key per screen in its Custom Data; display_0 is set to status, the rest are
-blank. Put status on whichever screens should show the dashboard:
+Add [launchcontrol] to the name of an LCD or cockpit. Its display_0 is set to
+status. Add a key for any other screen that should show the dashboard:
 [launchcontrol]
 display_0=status
-display_1=
-The PB's own screens have the same keys in the PB section, blank by default.
+display_2=status
+The PB's own screens take the same keys in the PB section. Run 'config' to
+list which display_<n> keys each block has screens for.
+
+show_title=false in a block's section drops the script title line from its
+screens, for a screen whose job is already obvious from where it is.
 
 The dashboard shows a status lamp, hydrogen and battery gauges with the launch
 minimum marked, thruster and gyroscope counts, and any issues.
@@ -65,32 +68,42 @@ PB CONFIGURATION
 
 launch_delay_seconds=0.5   Between powering up and releasing.
 dock_delay_seconds=0.5     Between connecting and shutting down.
-min_hydrogen_percent=90    Launch needs at least this much.
-min_battery_percent=90     Launch needs at least this much.
+min_hydrogen_percent=40    Launch needs at least this much.
+min_battery_percent=40     Launch needs at least this much.
+                           These are launch gates, not warning levels: below
+                           them the launch is refused. Raise them if you want
+                           a fuller ship before every launch.
 auto_dock=true             false stops the automatic shutdown on connection.
 auto_recover=true          false stops flight systems coming back on if the
                            ship disconnects without launching.
-display_0= display_1=      Roles for the PB's own screens.
+show_title=true            Whether this block's screens carry the script
+                           title line.
+display_0= display_1=      Roles for the PB's own screens. Add the ones you
+                           want; they are not written for you.
 
-Missing keys are restored, invalid values fall back with a warning, and
-malformed INI is left untouched while defaults are used. Edits are picked up
-within about ten seconds or on any command.
+Settings with a default are written into Custom Data on first run. Settings
+that only matter when you set them, such as unused display_<n> keys and the
+block overrides below, stay absent until you add them. Missing keys are
+restored, invalid values fall back with a warning, and malformed INI is left
+untouched while defaults are used. Edits are picked up within about ten
+seconds or on any command.
 
 BLOCK OVERRIDES
 -----------
 
 A block opts in by carrying the name tag or a [launchcontrol] section in its
-Custom Data. Its section is then completed with blank defaults:
+Custom Data:
 [launchcontrol]
 ignore=false
-docked=
-flight=
+docked=off
+flight=on
 
 ignore=true leaves the block alone entirely. docked and flight set what the
 block does in each state: on, off, or ignore. Batteries also accept recharge,
 auto, and discharge. Hydrogen and oxygen tanks also accept stockpile and auto.
-Blank inherits the built-in rule. Overrides work on any block, including ones
-the script does not manage by default.
+Leave a key out to inherit the built-in rule for the block's type; the script
+does not write them for you. Overrides work on any block, including ones the
+script does not manage by default.
 
 Cockpits, remote controls, timers, event controllers, button panels, the PB,
 and connectors are never switched.
@@ -119,3 +132,5 @@ NOTES
 - The state is read from the dock port whenever the script starts, so
   recompiling or reloading the world does not change any systems.
 - Recompiling leaves Manual mode.
+- FleetTelemetry measures fullness with the same shared code, so the two
+  scripts never disagree about a number. Neither reads the other's state.

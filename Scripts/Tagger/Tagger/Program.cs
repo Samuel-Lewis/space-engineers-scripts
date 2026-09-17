@@ -184,7 +184,8 @@ namespace IngameScript
             configuration = new IniDocument(Me, warning => configWarnings.Add(warning));
             includeConnectedGrids = configuration.Bool(ConfigSection, "include_connected_grids", false);
             watchConfig = configuration.Bool(ConfigSection, "watch_config", true);
-            gridIdOverride = configuration.String(ConfigSection, "grid_id").Trim();
+            // An override with no value of its own, so it is only written once it has one.
+            gridIdOverride = configuration.Optional(ConfigSection, "grid_id").Trim();
 
             double interval = configuration.Double(ConfigSection, "run_every_minutes", 0, 0);
             if (interval != runEveryMinutes) elapsedSeconds = 0;

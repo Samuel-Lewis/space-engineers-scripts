@@ -16,10 +16,17 @@ namespace IngameScript
             public SystemAction Flight;
         }
 
+        // One surface showing the dashboard, and whether it carries the script's title.
+        sealed class Screen
+        {
+            public IMyTextSurface Surface;
+            public bool ShowTitle;
+        }
+
         readonly List<ManagedBlock> managed = new List<ManagedBlock>();
         readonly List<IMyShipConnector> ports = new List<IMyShipConnector>();
         readonly List<IMyLightingBlock> statusLights = new List<IMyLightingBlock>();
-        readonly List<IMyTextSurface> displaySurfaces = new List<IMyTextSurface>();
+        readonly List<Screen> screens = new List<Screen>();
         readonly List<IMyBatteryBlock> batteries = new List<IMyBatteryBlock>();
         readonly List<IMyGasTank> hydrogenTanks = new List<IMyGasTank>();
         readonly List<IMyThrust> thrusters = new List<IMyThrust>();
@@ -28,7 +35,12 @@ namespace IngameScript
         readonly List<IMyTerminalBlock> scanBuffer = new List<IMyTerminalBlock>();
         readonly List<IMyShipConnector> allConnectors = new List<IMyShipConnector>();
         readonly List<IMyPowerProducer> hostPowerBuffer = new List<IMyPowerProducer>();
-        readonly List<IMyTextSurface> pbSurfaces = new List<IMyTextSurface>();
+        readonly List<Screen> pbScreens = new List<Screen>();
+        // Surfaces found per opted-in block, so 'config' can say which display_<n> keys
+        // are available without writing blank ones into Custom Data.
+        readonly List<string> surfaceCounts = new List<string>();
+        readonly List<string> pbSurfaceCounts = new List<string>();
+        readonly GridMetrics metrics = new GridMetrics();
         // Blocks that opted in, so their Custom Data edits and renames trigger a rescan.
         readonly List<IniDocument> blockConfigs = new List<IniDocument>();
         readonly List<IMyTerminalBlock> blockConfigOwners = new List<IMyTerminalBlock>();
@@ -45,7 +57,7 @@ namespace IngameScript
             managed.Clear();
             ports.Clear();
             statusLights.Clear();
-            displaySurfaces.Clear();
+            screens.Clear();
             batteries.Clear();
             hydrogenTanks.Clear();
             thrusters.Clear();
@@ -55,7 +67,10 @@ namespace IngameScript
             blockConfigs.Clear();
             blockConfigOwners.Clear();
             blockConfigNames.Clear();
-            displaySurfaces.AddRange(pbSurfaces);
+            surfaceCounts.Clear();
+            // The PB's own screens are read with the configuration, before this scan.
+            screens.AddRange(pbScreens);
+            surfaceCounts.AddRange(pbSurfaceCounts);
 
             scanBuffer.Clear();
             GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(scanBuffer, block => block.IsSameConstructAs(Me));
@@ -102,15 +117,17 @@ namespace IngameScript
                 }
 
                 if (block is IMyBatteryBlock) batteries.Add((IMyBatteryBlock)block);
-                else if (block is IMyGasTank && IsHydrogenTank(block)) hydrogenTanks.Add((IMyGasTank)block);
+                else if (block is IMyGasTank && GridMetrics.IsHydrogenTank(block)) hydrogenTanks.Add((IMyGasTank)block);
                 else if (block is IMyThrust) thrusters.Add((IMyThrust)block);
                 else if (block is IMyGyro) gyros.Add((IMyGyro)block);
 
                 SystemAction docked;
                 SystemAction flight;
                 bool hasRule = DefaultRule(functional, out docked, out flight);
-                string dockedValue = ini == null ? "" : ini.String(Section, "docked", "").Trim();
-                string flightValue = ini == null ? "" : ini.String(Section, "flight", "").Trim();
+                // Both are overrides of the default rule for the block's type, so an
+                // absent key stays absent rather than being written back blank.
+                string dockedValue = ini == null ? "" : ini.Optional(Section, "docked").Trim();
+                string flightValue = ini == null ? "" : ini.Optional(Section, "flight").Trim();
                 if (dockedValue.Length > 0) { docked = ParseAction(functional, "docked", dockedValue); hasRule = true; }
                 if (flightValue.Length > 0) { flight = ParseAction(functional, "flight", flightValue); hasRule = true; }
                 Finish(ini);
@@ -127,7 +144,6 @@ namespace IngameScript
                 else portProblem = allConnectors.Count + " connectors found. Mark the dock port with dock_port=true.";
             }
 
-            dashboard.SetSurfaces(displaySurfaces);
             lastLightKey = "";
         }
 
@@ -146,23 +162,38 @@ namespace IngameScript
             return false;
         }
 
-        // One display_<n> key per surface; "status" shows the dashboard, blank leaves
-        // the surface alone. A tagged block shows it on display_0 by default.
+        // One display_<n> key per surface; "status" shows the dashboard. A tagged block
+        // shows it on display_0 by default; every other surface is optional, so its key
+        // is only written once it has been given a role.
         void ReadDisplays(IMyTerminalBlock block, IniDocument ini, bool tagged)
         {
             IMyTextPanel panel = block as IMyTextPanel;
             IMyTextSurfaceProvider provider = block as IMyTextSurfaceProvider;
             int count = panel != null ? 1 : provider != null ? provider.SurfaceCount : 0;
             bool self = block.EntityId == Me.EntityId;
-            if (self) pbSurfaces.Clear();
+            if (self)
+            {
+                pbScreens.Clear();
+                pbSurfaceCounts.Clear();
+            }
+            if (count == 0) return;
+            // Only blocks that actually have screens get a title setting.
+            bool showTitle = ini.Bool(Section, "show_title", true);
+            List<Screen> target = self ? pbScreens : screens;
+            (self ? pbSurfaceCounts : surfaceCounts)
+                .Add(block.CustomName + " (display_0" + (count > 1 ? "-display_" + (count - 1) : "") + ")");
+            Func<string, bool> valid = text => text.Trim().Length == 0
+                || string.Equals(text.Trim(), "status", StringComparison.OrdinalIgnoreCase);
             for (int index = 0; index < count; index++)
             {
-                string value = ini.String(Section, "display_" + index, tagged && index == 0 ? "status" : "",
-                    text => text.Trim().Length == 0 || string.Equals(text.Trim(), "status", StringComparison.OrdinalIgnoreCase),
-                    "status or blank").Trim();
+                string key = "display_" + index;
+                string value = tagged && index == 0
+                    ? ini.String(Section, key, "status", valid, "status or blank").Trim()
+                    : ini.Optional(Section, key, valid, "status or blank").Trim();
                 if (value.Length == 0) continue;
                 IMyTextSurface surface = panel != null ? (IMyTextSurface)panel : provider.GetSurface(index);
-                (self ? pbSurfaces : displaySurfaces).Add(surface);
+                dashboard.Prepare(surface);
+                target.Add(new Screen { Surface = surface, ShowTitle = showTitle });
             }
         }
 
@@ -173,16 +204,6 @@ namespace IngameScript
             return block is IMyShipController || block is IMyProgrammableBlock
                 || type.EndsWith("TimerBlock") || type.EndsWith("EventControllerBlock")
                 || type.EndsWith("ButtonPanel");
-        }
-
-        static bool IsHydrogenTank(IMyTerminalBlock block)
-        {
-            return block.BlockDefinition.SubtypeId.IndexOf("Hydrogen", StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
-        static bool IsHydrogenEngine(IMyTerminalBlock block)
-        {
-            return block.BlockDefinition.TypeIdString.EndsWith("HydrogenEngine");
         }
 
         static bool DefaultRule(IMyFunctionalBlock block, out SystemAction docked, out SystemAction flight)
@@ -197,7 +218,7 @@ namespace IngameScript
             }
             if (block is IMyGasTank)
             {
-                if (!IsHydrogenTank(block)) return false;
+                if (!GridMetrics.IsHydrogenTank(block)) return false;
                 docked = SystemAction.Stockpile;
                 flight = SystemAction.Auto;
                 return true;
@@ -205,7 +226,7 @@ namespace IngameScript
             // Antennas are left alone so IGC scripts such as FleetTelemetry keep
             // talking while docked.
             if (block is IMyThrust || block is IMyGyro || block is IMyReactor || block is IMyGasGenerator
-                || block is IMyBeacon || block is IMyOreDetector || block is IMyLightingBlock || IsHydrogenEngine(block))
+                || block is IMyBeacon || block is IMyOreDetector || block is IMyLightingBlock || GridMetrics.IsHydrogenEngine(block))
             {
                 docked = SystemAction.Off;
                 flight = SystemAction.On;
@@ -290,37 +311,26 @@ namespace IngameScript
                 if (port.Status == MyShipConnectorStatus.Connected) port.Disconnect();
         }
 
-        // Returns -1 when the grid has none of that system.
+        // Both measure only the blocks this script manages, which is the point: an
+        // ignored tank is not fuel this script will burn. The arithmetic itself is
+        // shared with FleetTelemetry so the two never drift. -1 means none fitted.
         double HydrogenPercent()
         {
-            double stored = 0;
-            double capacity = 0;
-            foreach (IMyGasTank tank in hydrogenTanks)
-            {
-                stored += tank.FilledRatio * tank.Capacity;
-                capacity += tank.Capacity;
-            }
-            return capacity > 0 ? stored / capacity * 100 : -1;
+            metrics.Reset();
+            for (int i = 0; i < hydrogenTanks.Count; i++) metrics.Add(hydrogenTanks[i]);
+            return metrics.Hydrogen;
         }
 
         double BatteryPercent()
         {
-            double stored = 0;
-            double capacity = 0;
-            foreach (IMyBatteryBlock battery in batteries)
-            {
-                stored += battery.CurrentStoredPower;
-                capacity += battery.MaxStoredPower;
-            }
-            return capacity > 0 ? stored / capacity * 100 : -1;
+            metrics.Reset();
+            for (int i = 0; i < batteries.Count; i++) metrics.Add(batteries[i]);
+            return metrics.Power;
         }
 
         static int Working<T>(List<T> blocks) where T : class, IMyTerminalBlock
         {
-            int count = 0;
-            foreach (T block in blocks)
-                if (block.IsFunctional) count++;
-            return count;
+            return GridMetrics.Working(blocks);
         }
 
         bool RunChecks()

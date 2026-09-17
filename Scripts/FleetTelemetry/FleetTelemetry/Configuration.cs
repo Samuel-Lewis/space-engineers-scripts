@@ -10,6 +10,12 @@ namespace IngameScript
         {
             public string Callsign = "", Channel = "FleetTelemetry", Cockpit = "";
             public double StaleSeconds = 8, DropSeconds = 60;
+            // Gauges turn red below these and amber just above them.
+            public double HealthWarning = 90, PowerWarning = 40, HydrogenWarning = 40, OxygenWarning = 40;
+            // Above this height above ground, altitude is reported above sea level
+            // instead, because height above ground stops meaning much up there.
+            public double HighAltitude = 5000;
+            public bool ShowTitle = true;
         }
 
         // One surface of an opted-in block and the role it plays.
@@ -19,6 +25,7 @@ namespace IngameScript
             public string Role;
             public bool HeadingUp;
             public string TrackTarget;
+            public bool ShowTitle = true;
         }
 
         static readonly string[] Roles = { "onboard", "fleet", "map", "track" };
@@ -31,6 +38,9 @@ namespace IngameScript
         readonly List<IniDocument> blockConfigs = new List<IniDocument>();
         readonly List<IMyTerminalBlock> blockConfigOwners = new List<IMyTerminalBlock>();
         readonly List<string> blockConfigNames = new List<string>();
+        // Surfaces found per opted-in block, so 'config' can say which display_<n>
+        // keys are available without writing blank ones into Custom Data.
+        readonly List<string> surfaceCounts = new List<string>();
         FleetConfig config = new FleetConfig();
         IniDocument pbConfig;
         IMyShipController cockpit;
@@ -40,6 +50,7 @@ namespace IngameScript
             scanSeconds = 0;
             configWarnings.Clear();
             screens.Clear();
+            surfaceCounts.Clear();
             config = ReadConfiguration();
             DiscoverBlocks();
         }
@@ -58,7 +69,7 @@ namespace IngameScript
             var ini = new IniDocument(Me, warning => AddUnique(configWarnings, warning));
             pbConfig = ini;
             var next = new FleetConfig();
-            next.Callsign = ini.String(Section, "callsign", "").Trim();
+            next.Callsign = ini.Optional(Section, "callsign").Trim();
             next.Channel = ini.String(Section, "channel", "FleetTelemetry",
                 value => !string.IsNullOrWhiteSpace(value), "a broadcast tag").Trim();
             next.StaleSeconds = ini.Double(Section, "stale_seconds", 8, 1, 86400);
@@ -68,8 +79,14 @@ namespace IngameScript
                 ini.Fallback(Section, "drop_seconds", "a value of at least stale_seconds", next.StaleSeconds.ToString("0.#"));
                 next.DropSeconds = next.StaleSeconds;
             }
-            next.Cockpit = ini.String(Section, "cockpit", "").Trim();
-            // The PB's own screens always have display keys, blank by default.
+            next.HealthWarning = ini.Double(Section, "health_warning_percent", 90, 0, 100);
+            next.PowerWarning = ini.Double(Section, "power_warning_percent", 40, 0, 100);
+            next.HydrogenWarning = ini.Double(Section, "hydrogen_warning_percent", 40, 0, 100);
+            next.OxygenWarning = ini.Double(Section, "oxygen_warning_percent", 40, 0, 100);
+            next.HighAltitude = ini.Double(Section, "high_altitude_metres", 5000, 0, 1000000);
+            next.ShowTitle = ini.Bool(Section, "show_title", true);
+            next.Cockpit = ini.Optional(Section, "cockpit").Trim();
+            // The PB's own screens may take roles without the PB being tagged.
             ReadDisplays(Me, ini, false);
             ini.CheckKeys(Section);
             ini.Save();
@@ -126,8 +143,10 @@ namespace IngameScript
                 ini.Save();
             }
 
-            // Dock port rule: one connector is the port; several need dock_port=true.
-            if (ports.Count == 0)
+            // Dock port rule: one connector is the port; several need dock_port=true. A
+            // static grid cannot move, never reports DOCKED and so needs no dock port:
+            // its connectors are docking bays for other ships and are not its business.
+            if (ports.Count == 0 && !Me.CubeGrid.IsStatic)
             {
                 if (allConnectors.Count == 1) ports.Add(allConnectors[0]);
                 else if (allConnectors.Count > 1)
@@ -137,13 +156,14 @@ namespace IngameScript
             if (cockpit == null) cockpit = mainCockpit ?? anyController;
             if (config.Cockpit.Length > 0 && cockpit == null)
                 AddUnique(configWarnings, "Cockpit not found: " + config.Cockpit + ". Speed, heading, altitude and heading-up maps need one.");
-            else if (cockpit == null)
+            else if (cockpit == null && !Me.CubeGrid.IsStatic)
                 AddUnique(configWarnings, "No cockpit or remote control: speed, heading and altitude are unknown.");
         }
 
         // One display_<n> key per surface: a role, optionally followed by its option.
-        //   display_0=map heading      display_1=track Miner 1      display_2=
-        // A tagged block shows onboard on display_0 by default.
+        //   display_0=map heading      display_1=track Miner 1
+        // A tagged block shows onboard on display_0 by default; every other surface is
+        // optional, so its key is only written once it has been given a role.
         void ReadDisplays(IMyTerminalBlock block, IniDocument ini, bool tagged)
         {
             var panel = block as IMyTextPanel;
@@ -154,18 +174,24 @@ namespace IngameScript
                 if (tagged) AddUnique(configWarnings, block.CustomName + ": tagged " + NameTag + " but has no screen.");
                 return;
             }
+            // Only blocks that actually have screens get a title setting.
+            bool showTitle = ini.Bool(Section, "show_title", true);
+            surfaceCounts.Add(block.CustomName + " (display_0" + (count > 1 ? "-display_" + (count - 1) : "") + ")");
+            const string Expected = "onboard, fleet, map [north|heading], track <grid name> or blank";
             for (int index = 0; index < count; index++)
             {
                 string key = "display_" + index;
-                string value = ini.String(Section, key, tagged && index == 0 ? "onboard" : "",
-                    text => RoleOf(text).Length > 0 || text.Trim().Length == 0,
-                    "onboard, fleet, map [north|heading], track <grid name> or blank").Trim();
+                Func<string, bool> valid = text => RoleOf(text).Length > 0 || text.Trim().Length == 0;
+                string value = tagged && index == 0
+                    ? ini.String(Section, key, "onboard", valid, Expected).Trim()
+                    : ini.Optional(Section, key, valid, Expected).Trim();
                 string role = RoleOf(value);
                 if (role.Length == 0) continue;
                 string option = value.Substring(role.Length).Trim();
                 var screen = new Screen
                 {
                     Role = role,
+                    ShowTitle = showTitle,
                     Surface = panel != null ? (IMyTextSurface)panel : provider.GetSurface(index)
                 };
                 if (role == "map")

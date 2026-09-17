@@ -34,6 +34,9 @@ namespace IngameScript
         double minBattery;
         bool autoDock;
         bool autoRecover;
+        // The PB's own show_title, for the config echo. Every block with screens has its
+        // own; ReadDisplays reads each one where it finds the screens.
+        bool showTitle;
 
         Phase phase = Phase.Flight;
         bool blocked;
@@ -86,10 +89,11 @@ namespace IngameScript
             configuration = new IniDocument(Me, warning => configWarnings.Add(warning));
             launchDelay = configuration.Double(Section, "launch_delay_seconds", 0.5, 0, 60);
             dockDelay = configuration.Double(Section, "dock_delay_seconds", 0.5, 0, 60);
-            minHydrogen = configuration.Double(Section, "min_hydrogen_percent", 90, 0, 100);
-            minBattery = configuration.Double(Section, "min_battery_percent", 90, 0, 100);
+            minHydrogen = configuration.Double(Section, "min_hydrogen_percent", 40, 0, 100);
+            minBattery = configuration.Double(Section, "min_battery_percent", 40, 0, 100);
             autoDock = configuration.Bool(Section, "auto_dock", true);
             autoRecover = configuration.Bool(Section, "auto_recover", true);
+            showTitle = configuration.Bool(Section, "show_title", true);
             ReadDisplays(Me, configuration, false);
             configuration.CheckKeys(Section);
             configuration.Save();
@@ -104,7 +108,10 @@ namespace IngameScript
             Echo("min_battery_percent=" + minBattery);
             Echo("auto_dock=" + (autoDock ? "true" : "false"));
             Echo("auto_recover=" + (autoRecover ? "true" : "false"));
-            Echo("Dock port: " + PortSummary() + " | Displays: " + dashboard.SurfaceCount + " | Status lights: " + statusLights.Count);
+            Echo("show_title=" + (showTitle ? "true" : "false"));
+            Echo("Dock port: " + PortSummary() + " | Displays: " + screens.Count + " | Status lights: " + statusLights.Count);
+            // Blank display_<n> keys are no longer written, so list what is available.
+            foreach (string block in surfaceCounts) Echo("Screens on " + block);
             foreach (string warning in configWarnings) Echo("! " + warning);
         }
 

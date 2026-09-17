@@ -26,6 +26,7 @@ Tagger, LaunchControl and FleetTelemetry are one family and must feel the same. 
 
 - One lowercase section per script, named after the script: `[tagger]`, `[launchcontrol]`, `[fleet]`. The same word in square brackets is the script's name tag.
 - The PB's own section is created and kept complete by `IniDocument`: missing keys are added with defaults, invalid values fall back with a warning, malformed INI is left untouched while defaults apply, unknown keys warn. No comments are written.
+- Only settings that have a default value are written. A setting that does nothing until the user gives it a value — a name to match, an override of a built-in rule, an unused `display_<n>` — is read with `IniDocument.Optional` and stays absent until the user adds it. Where dropping a key costs discoverability, the `config` command makes up for it: it lists which `display_<n>` keys each opted-in block has screens for.
 - Per-block sections are opt-in. A block opts in by carrying the name tag or by already having the section. Once opted in, its section is completed the same way as the PB's. Blocks that have not opted in are never written to.
 - Keys are `snake_case`. Quantities carry their unit as a suffix: `_seconds`, `_minutes`, `_percent`. Booleans are `true`/`false`. Names of other blocks or grids are matched exactly, case-insensitively, against the current name.
 - Dock port rule: a grid with one connector uses it; with several, the dock port is marked with `dock_port=true` in that connector's section, and nothing is assumed until one is marked.
@@ -34,7 +35,9 @@ Tagger, LaunchControl and FleetTelemetry are one family and must feel the same. 
 ### Displays
 
 - A block shows a script's screens when its name contains the script's tag. Its section then gets one `display_<n>=` key per surface (`display_0` for an LCD; one per screen for a cockpit). The value is the screen role, optionally followed by that role's option (`map heading`, `track Miner 1`); blank leaves the surface alone. A one-screen script uses the role `status`.
-- The PB's own surfaces always have `display_<n>` keys in the PB section, blank by default, with no tag needed.
+- The PB's own surfaces take `display_<n>` keys in the PB section with no tag needed.
+- Any block with screens gets `show_title` in its section, default `true`. False drops the script's title line from that block's screens. It is per block, so a script drawing several screens draws them one at a time rather than in one batch.
+- How full a grid is — power, hydrogen, oxygen, cargo, block health — is measured by `GridMetrics` in `Mixins/GridMetrics`. Each script decides which blocks to count and feeds them in; the arithmetic is shared so two scripts never disagree about a number. Scripts never read each other's state.
 - All drawing goes through `SurfaceDashboard` in `Mixins/Display`. Title is the script's name as written (`LaunchControl`, `FleetTelemetry`). Same palette, same header, same gauge rows; status screens use `DrawStatus`, tables `DrawTable`, plots `DrawRadar`, empty states `DrawMessage`.
 
 ### Terminal output and commands

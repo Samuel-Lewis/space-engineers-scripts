@@ -30,19 +30,23 @@ namespace IngameScript
             public double Speed = -1;
             // Degrees clockwise from north on the local horizontal plane; -1 when unknown.
             public double Heading = -1;
-            // Metres above sea level; NaN outside natural gravity.
+            // Metres above the ground directly below; NaN outside natural gravity.
             public double Altitude = double.NaN;
+            // Metres above the planet's sea level; NaN outside natural gravity. Useful
+            // high up, where height above ground stops meaning much.
+            public double SeaLevel = double.NaN;
             // Ship controllers with someone in them.
             public int Crew;
             public Vector3D Position;
 
             const char Separator = '|';
-            const int Fields = 16;
+            const int Fields = 17;
             static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
             public string State { get { return Station ? "STATION" : Docked ? "DOCKED" : "FLIGHT"; } }
 
-            // name|callsign|S/D/F|health|power|hydrogen|oxygen|cargo|speed|heading|altitude|crew|x|y|z|dockedTo
+            // name|callsign|S/D/F|health|power|hydrogen|oxygen|cargo|speed|heading|
+            // altitude|sealevel|crew|x|y|z|dockedTo
             // Compact on purpose: one broadcast per grid per Update100 cycle.
             public string Encode(StringBuilder buffer)
             {
@@ -57,7 +61,8 @@ namespace IngameScript
                     .Append(Number(Cargo)).Append(Separator)
                     .Append(Number(Speed)).Append(Separator)
                     .Append(Number(Heading)).Append(Separator)
-                    .Append(double.IsNaN(Altitude) ? "" : Math.Round(Altitude).ToString(Invariant)).Append(Separator)
+                    .Append(Height(Altitude)).Append(Separator)
+                    .Append(Height(SeaLevel)).Append(Separator)
                     .Append(Crew).Append(Separator)
                     .Append(Math.Round(Position.X).ToString(Invariant)).Append(Separator)
                     .Append(Math.Round(Position.Y).ToString(Invariant)).Append(Separator)
@@ -71,13 +76,13 @@ namespace IngameScript
                 if (string.IsNullOrEmpty(data)) return false;
                 string[] parts = data.Split(Separator);
                 if (parts.Length != Fields || parts[0].Length == 0) return false;
-                double health, power, hydrogen, oxygen, cargo, speed, heading, altitude, x, y, z;
+                double health, power, hydrogen, oxygen, cargo, speed, heading, altitude, sealevel, x, y, z;
                 int crew;
                 if (!ParseDouble(parts[3], out health) || !ParseDouble(parts[4], out power) || !ParseDouble(parts[5], out hydrogen)
                     || !ParseDouble(parts[6], out oxygen) || !ParseDouble(parts[7], out cargo) || !ParseDouble(parts[8], out speed)
-                    || !ParseDouble(parts[9], out heading) || !ParseAltitude(parts[10], out altitude)
-                    || !int.TryParse(parts[11], NumberStyles.Integer, Invariant, out crew)
-                    || !ParseDouble(parts[12], out x) || !ParseDouble(parts[13], out y) || !ParseDouble(parts[14], out z))
+                    || !ParseDouble(parts[9], out heading) || !ParseHeight(parts[10], out altitude) || !ParseHeight(parts[11], out sealevel)
+                    || !int.TryParse(parts[12], NumberStyles.Integer, Invariant, out crew)
+                    || !ParseDouble(parts[13], out x) || !ParseDouble(parts[14], out y) || !ParseDouble(parts[15], out z))
                     return false;
                 into.Name = parts[0];
                 into.Callsign = parts[1];
@@ -91,9 +96,10 @@ namespace IngameScript
                 into.Speed = speed;
                 into.Heading = heading;
                 into.Altitude = altitude;
+                into.SeaLevel = sealevel;
                 into.Crew = crew;
                 into.Position = new Vector3D(x, y, z);
-                into.DockedTo = parts[15];
+                into.DockedTo = parts[16];
                 return true;
             }
 
@@ -107,80 +113,48 @@ namespace IngameScript
                 return value < 0 ? "-1" : value.ToString("0.0", Invariant);
             }
 
+            static string Height(double value)
+            {
+                return double.IsNaN(value) ? "" : Math.Round(value).ToString(Invariant);
+            }
+
             static bool ParseDouble(string text, out double value)
             {
                 return double.TryParse(text, NumberStyles.Float, Invariant, out value) && !double.IsNaN(value) && !double.IsInfinity(value);
             }
 
-            static bool ParseAltitude(string text, out double value)
+            static bool ParseHeight(string text, out double value)
             {
                 value = double.NaN;
                 return text.Length == 0 || ParseDouble(text, out value);
             }
         }
 
+        readonly GridMetrics metrics = new GridMetrics();
         string antennaWarning;
 
         // Measures this grid directly. Nothing here reads another script's state.
         void Collect(Telemetry into)
         {
             into.Name = Me.CubeGrid.CustomName ?? "";
-            into.Callsign = config.Callsign.Length > 0 ? config.Callsign
+            string callsign = config.Callsign.Length > 0 ? config.Callsign
                 : into.Name.Length > 4 ? into.Name.Substring(0, 4) : into.Name;
+            // A callsign is a code, not a name; upper case keeps map labels even.
+            into.Callsign = callsign.ToUpperInvariant();
             into.Position = cockpit != null ? cockpit.GetPosition() : Me.GetPosition();
             into.Station = Me.CubeGrid.IsStatic;
             into.Docked = false;
             into.DockedTo = "";
-            into.Crew = 0;
 
-            double powerStored = 0, powerCapacity = 0, hydrogenStored = 0, hydrogenCapacity = 0;
-            double oxygenStored = 0, oxygenCapacity = 0, cargoUsed = 0, cargoCapacity = 0;
-            int batteries = 0, hydrogenTanks = 0, oxygenTanks = 0, total = 0, functional = 0, antennas = 0, antennasWorking = 0;
-            foreach (IMyTerminalBlock block in blocks)
-            {
-                if (block.Closed) continue;
-                total++;
-                if (block.IsFunctional) functional++;
-                if (block is IMyRadioAntenna || block is IMyLaserAntenna)
-                {
-                    antennas++;
-                    if (block.IsWorking) antennasWorking++;
-                }
-                var controller = block as IMyShipController;
-                if (controller != null && controller.IsUnderControl) into.Crew++;
-                var battery = block as IMyBatteryBlock;
-                if (battery != null)
-                {
-                    batteries++;
-                    powerStored += battery.CurrentStoredPower;
-                    powerCapacity += battery.MaxStoredPower;
-                }
-                var tank = block as IMyGasTank;
-                if (tank != null)
-                {
-                    // Tanks carry bottles in their inventory; they report as gas, not cargo.
-                    if (tank.BlockDefinition.SubtypeId.IndexOf("Hydrogen", StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        hydrogenTanks++;
-                        hydrogenStored += tank.Capacity * tank.FilledRatio;
-                        hydrogenCapacity += tank.Capacity;
-                    }
-                    else
-                    {
-                        oxygenTanks++;
-                        oxygenStored += tank.Capacity * tank.FilledRatio;
-                        oxygenCapacity += tank.Capacity;
-                    }
-                    continue;
-                }
-                for (int i = 0; i < block.InventoryCount; i++)
-                {
-                    IMyInventory inventory = block.GetInventory(i);
-                    if (inventory == null) continue;
-                    cargoUsed += (double)inventory.CurrentVolume;
-                    cargoCapacity += (double)inventory.MaxVolume;
-                }
-            }
+            metrics.Reset();
+            foreach (IMyTerminalBlock block in blocks) metrics.Add(block);
+            into.Health = metrics.Health;
+            into.Power = metrics.Power;
+            into.Hydrogen = metrics.Hydrogen;
+            into.Oxygen = metrics.Oxygen;
+            into.Cargo = metrics.Cargo;
+            into.Crew = metrics.Crew;
+
             // Docked means the dock port (see DiscoverBlocks) is locked on another grid.
             foreach (IMyShipConnector port in ports)
             {
@@ -189,24 +163,26 @@ namespace IngameScript
                 if (into.DockedTo.Length == 0 && port.OtherConnector != null)
                     into.DockedTo = port.OtherConnector.CubeGrid.CustomName ?? "";
             }
-            into.Health = total == 0 ? -1 : functional * 100.0 / total;
-            into.Power = batteries == 0 || powerCapacity <= 0 ? -1 : powerStored * 100 / powerCapacity;
-            into.Hydrogen = hydrogenTanks == 0 || hydrogenCapacity <= 0 ? -1 : hydrogenStored * 100 / hydrogenCapacity;
-            into.Oxygen = oxygenTanks == 0 || oxygenCapacity <= 0 ? -1 : oxygenStored * 100 / oxygenCapacity;
-            into.Cargo = cargoCapacity <= 0 ? -1 : cargoUsed * 100 / cargoCapacity;
 
-            // Motion needs a ship controller; without one these stay unknown.
+            // Motion needs a ship controller; without one these stay unknown. A static
+            // grid cannot move and has no meaningful facing, so it reports none of them
+            // rather than a row of zeroes.
             into.Speed = -1;
             into.Heading = -1;
             into.Altitude = double.NaN;
-            if (cockpit != null)
+            into.SeaLevel = double.NaN;
+            if (cockpit != null && !into.Station)
             {
                 into.Speed = cockpit.GetShipSpeed();
                 Vector3D up, north, east;
                 if (PlaneBasis(out up, out north, out east))
                 {
-                    double altitude;
-                    if (cockpit.TryGetPlanetElevation(MyPlanetElevation.Sealevel, out altitude)) into.Altitude = altitude;
+                    // Surface is the height above the ground below, the figure the HUD
+                    // shows. Sealevel measures to the planet's sea-level sphere, which on
+                    // a plateau or in a canyon is hundreds of metres from the ground.
+                    double value;
+                    if (cockpit.TryGetPlanetElevation(MyPlanetElevation.Surface, out value)) into.Altitude = value;
+                    if (cockpit.TryGetPlanetElevation(MyPlanetElevation.Sealevel, out value)) into.SeaLevel = value;
                 }
                 Vector3D forward = Project(cockpit.WorldMatrix.Forward, up);
                 if (forward.LengthSquared() > 1e-6)
@@ -217,8 +193,8 @@ namespace IngameScript
             }
 
             // Local only, never broadcast.
-            antennaWarning = antennas == 0 ? "No antenna on this grid: nothing is sent or received."
-                : antennasWorking == 0 ? "No working antenna: nothing is sent or received."
+            antennaWarning = metrics.Antennas == 0 ? "No antenna on this grid: nothing is sent or received."
+                : metrics.WorkingAntennas == 0 ? "No working antenna: nothing is sent or received."
                 : null;
         }
 
